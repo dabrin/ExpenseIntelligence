@@ -1,0 +1,272 @@
+{
+  "source": "gastos_desordenados.json",
+  "source_sha256": "41cd64c068881428191eb72f31f0bb38c8cc44e4ec251a4f0dc84c82fcfbc494",
+  "original_parse_error": "line 3 column 5: missing opening quote in id key",
+  "repaired_record_count": 10000,
+  "cases": [
+    {
+      "file": "00_repaired_baseline.json",
+      "syntactically_valid_json": true,
+      "injected_issues": [],
+      "sha256": "ecad9dfd068a8f26b69677ec6c2ab63b7da4afcf8763ec58881e7c5c064f072c"
+    },
+    {
+      "file": "01_duplicate_ids.json",
+      "syntactically_valid_json": true,
+      "injected_issues": [
+        {
+          "type": "duplicate_id",
+          "record_indices": [
+            50,
+            150,
+            250
+          ],
+          "duplicate_of_index": 0
+        }
+      ],
+      "sha256": "49fc1769178bfdd21075ae6f79246114ff1cd9e29eb57b66053e95f07d5f8e41"
+    },
+    {
+      "file": "02_invalid_dates.json",
+      "syntactically_valid_json": true,
+      "injected_issues": [
+        {
+          "type": "invalid_date",
+          "record_index": 30,
+          "value": "2026-02-30"
+        },
+        {
+          "type": "invalid_date",
+          "record_index": 60,
+          "value": "not-a-date"
+        },
+        {
+          "type": "invalid_date",
+          "record_index": 90,
+          "value": "2026/13/99"
+        },
+        {
+          "type": "invalid_date",
+          "record_index": 120,
+          "value": ""
+        }
+      ],
+      "sha256": "6782423789da934fd218556713bc7917a9bab2b862701aedbec9202d009eaef9"
+    },
+    {
+      "file": "03_invalid_amounts.json",
+      "syntactically_valid_json": true,
+      "injected_issues": [
+        {
+          "type": "invalid_amount",
+          "record_index": 31,
+          "value": -100
+        },
+        {
+          "type": "invalid_amount",
+          "record_index": 61,
+          "value": 0
+        },
+        {
+          "type": "invalid_amount",
+          "record_index": 91,
+          "value": null
+        },
+        {
+          "type": "invalid_amount",
+          "record_index": 121,
+          "value": "cien"
+        }
+      ],
+      "sha256": "0a77a8263c2222616bacde958c22f044d9af8ecef8f762743a4a47690007ebef"
+    },
+    {
+      "file": "04_inconsistent_types.json",
+      "syntactically_valid_json": true,
+      "injected_issues": [
+        {
+          "type": "invalid_type",
+          "record_index": 32,
+          "field": "id"
+        },
+        {
+          "type": "invalid_type",
+          "record_index": 62,
+          "field": "aprobado"
+        },
+        {
+          "type": "invalid_type",
+          "record_index": 92,
+          "field": "monto"
+        },
+        {
+          "type": "invalid_type",
+          "record_index": 122,
+          "field": "categoria"
+        }
+      ],
+      "sha256": "21f971fe6925f4ee770212e0cf2fa7b92e36918cc9f807f96539bd5386791ab4"
+    },
+    {
+      "file": "05_missing_fields.json",
+      "syntactically_valid_json": true,
+      "injected_issues": [
+        {
+          "type": "missing_field",
+          "record_index": 33,
+          "field": "id"
+        },
+        {
+          "type": "missing_field",
+          "record_index": 63,
+          "field": "moneda"
+        },
+        {
+          "type": "missing_field",
+          "record_index": 93,
+          "field": "fecha"
+        },
+        {
+          "type": "missing_field",
+          "record_index": 123,
+          "field": "departamento"
+        }
+      ],
+      "sha256": "5d5424777bdce459bc25cbfbf108c2243655d38a8bf6a4552f988b04e88669a6"
+    },
+    {
+      "file": "06_inconsistent_values.json",
+      "syntactically_valid_json": true,
+      "injected_issues": [
+        {
+          "type": "noncanonical_or_unknown_value",
+          "record_index": 34,
+          "field": "moneda",
+          "value": "usd"
+        },
+        {
+          "type": "noncanonical_or_unknown_value",
+          "record_index": 64,
+          "field": "moneda",
+          "value": "XYZ"
+        },
+        {
+          "type": "noncanonical_or_unknown_value",
+          "record_index": 94,
+          "field": "departamento",
+          "value": " tecnologia "
+        },
+        {
+          "type": "noncanonical_or_unknown_value",
+          "record_index": 124,
+          "field": "metodo_pago",
+          "value": "Crypto"
+        }
+      ],
+      "sha256": "550b447f6e84216d0b9fc4649246d87b85a008c80105c188f6b47b157f083f2d"
+    },
+    {
+      "file": "07_edge_cases.json",
+      "syntactically_valid_json": true,
+      "injected_issues": [
+        {
+          "type": "edge_case",
+          "record_index": 35,
+          "field": "descripcion"
+        },
+        {
+          "type": "edge_case",
+          "record_index": 65,
+          "field": "descripcion"
+        },
+        {
+          "type": "edge_case",
+          "record_index": 95,
+          "field": "monto"
+        },
+        {
+          "type": "edge_case",
+          "record_index": 125,
+          "field": "codigo_factura"
+        }
+      ],
+      "sha256": "02703e3d5dc3e882a40ada301773b40b038864dc0eb26807427358c6502d8350"
+    },
+    {
+      "file": "08_chaos_mixed.json",
+      "syntactically_valid_json": true,
+      "injected_issues": [
+        {
+          "type": "mixed_error",
+          "record_index": 40,
+          "field": "id"
+        },
+        {
+          "type": "mixed_error",
+          "record_index": 41,
+          "field": "fecha"
+        },
+        {
+          "type": "mixed_error",
+          "record_index": 42,
+          "field": "monto"
+        },
+        {
+          "type": "mixed_error",
+          "record_index": 43,
+          "field": "moneda"
+        },
+        {
+          "type": "mixed_error",
+          "record_index": 44,
+          "field": "aprobado"
+        },
+        {
+          "type": "mixed_error",
+          "record_index": 45,
+          "field": "categoria"
+        },
+        {
+          "type": "mixed_error",
+          "record_index": 46,
+          "field": "departamento"
+        }
+      ],
+      "sha256": "ad4a2fe9b85ecee9d2342d0dfda6715e6af4a6b1d287faed180678e7ce5a8c3d"
+    },
+    {
+      "file": "09_truncated_json.json",
+      "syntactically_valid_json": false,
+      "injected_issues": [
+        {
+          "type": "truncated_json",
+          "expected": "parser rejection"
+        }
+      ],
+      "sha256": "52adb3f39a2882de1bdf6bcd20f0dbd61a1b58eaa01fbcf782cdc8691ad379d4"
+    },
+    {
+      "file": "10_invalid_json_comma.json",
+      "syntactically_valid_json": false,
+      "injected_issues": [
+        {
+          "type": "malformed_json",
+          "expected": "parser rejection"
+        }
+      ],
+      "sha256": "1acc33e99d0d57a79c2c161f8a50f2d141ceb40a7c46c9ebe3542b90f6280346"
+    },
+    {
+      "file": "11_original_syntax_error.json",
+      "syntactically_valid_json": false,
+      "injected_issues": [
+        {
+          "type": "missing_quote_in_property_name",
+          "line": 3,
+          "column": 5
+        }
+      ],
+      "sha256": "41cd64c068881428191eb72f31f0bb38c8cc44e4ec251a4f0dc84c82fcfbc494"
+    }
+  ]
+}

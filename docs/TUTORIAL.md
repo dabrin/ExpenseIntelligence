@@ -102,6 +102,8 @@ Un gasto rechazado deja de contar como pendiente. Para reabrirlo, usa **Volver a
    - **Eliminar** archivos inactivos.
    - **Dejar el sistema limpio**: vuelve al original del sistema y borra archivos cargados, cambios, papelera, historial y respaldos. Es irreversible y exige escribir `LIMPIAR`.
 
+Para probar la tolerancia a datos sucios (fechas inválidas, duplicados, JSON truncado, etc.) usa los archivos de la carpeta [`archivosprueba/`](../archivosprueba/README.md).
+
 ## 7. Data Doctor, Asistente y Diagnóstico
 
 - **Data Doctor**: muestra anomalías (duplicados, fechas, formatos, etc.) con causa y recomendación. Las marcadas como autocorregibles se aplican con un clic y quedan en el Historial.

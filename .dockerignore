@@ -9,3 +9,4 @@ data/working/
 .DS_Store
 tests/**/bin/
 tests/**/obj/
+archivosprueba/

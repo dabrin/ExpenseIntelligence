@@ -23,11 +23,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=api /out ./
 COPY data/original/ /app/seed/
-# Live data (working copy, audit, uploaded files) must live on a persistent volume mounted at /data.
+# Live data (working copy, audit, uploaded files) must live on a persistent volume mounted at /data (Railway Volume; Docker VOLUME is not allowed there).
 ENV Storage__SeedPath=/app/seed/gastos_desordenados.json \
     Storage__WorkingDirectory=/data \
     ASPNETCORE_ENVIRONMENT=Production
-VOLUME /data
 EXPOSE 8080
 # appsettings.json pins "Urls" to localhost:5080, so override that key (not ASPNETCORE_URLS) and honour the platform's $PORT.
 CMD ["sh", "-c", "exec env Urls=http://0.0.0.0:${PORT:-8080} dotnet ExpenseIntelligence.Api.dll"]

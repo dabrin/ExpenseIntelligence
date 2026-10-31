@@ -1,0 +1,103 @@
+<header class="head rise">
+  <div>
+    <h1>Panorama de gastos</h1>
+    <p class="muted">
+      @if (summary(); as s) { {{ fmt.num(s.totalRecords) }} gastos en el filtro actual · datos en vivo (revisión {{ s.revision }}). Las monedas nunca se suman entre sí. }
+      @else { Cargando datos reales del archivo JSON… }
+    </p>
+  </div>
+  <div class="row">
+    <div class="seg" role="group" aria-label="Moneda de análisis para las gráficas">
+      @for (c of currencies(); track c) { <button type="button" [class.on]="cur() === c" (click)="curChoice.set(c)">{{ c }}</button> }
+    </div>
+    <div class="seg" role="group" aria-label="Granularidad temporal">
+      <button type="button" [class.on]="granularity() === 'month'" (click)="granularity.set('month')">Mensual</button>
+      <button type="button" [class.on]="granularity() === 'week'" (click)="granularity.set('week')">Semanal</button>
+    </div>
+  </div>
+</header>
+
+<app-filter-bar />
+
+@if (error(); as e) {
+  <div class="banner bad" role="alert" style="margin-top:16px"><app-icon name="alert" /><div><strong>No se pudo cargar el dashboard.</strong><div class="muted">{{ e }}</div></div><span class="spacer"></span><button class="btn sm" type="button" (click)="reload()"><app-icon name="refresh" [size]="14" /> Reintentar</button></div>
+}
+
+@if (loading() && !summary()) {
+  <section class="kpis">@for (i of [1,2,3,4]; track i) { <div class="card"><div class="skeleton" style="height:14px;width:40%"></div><div class="skeleton" style="height:34px;width:75%;margin:14px 0"></div><div class="skeleton" style="height:12px;width:55%"></div></div> }</section>
+  <section class="charts">@for (i of [1,2,3,4]; track i) { <div class="card"><div class="skeleton" style="height:260px"></div></div> }</section>
+} @else {
+  @if (summary(); as s) {
+  <div [class.stale]="loading()">
+  @if (!hasData()) {
+    <div class="card empty" style="margin-top:16px"><app-icon name="inbox" [size]="40" /><strong>Ningún gasto coincide con los filtros</strong><span>Ajusta o restablece los filtros para ver métricas.</span></div>
+  } @else {
+    <section class="kpis" aria-label="Indicadores clave">
+      @for (t of s.totals; track t.moneda) {
+        <article class="card kpi rise" [style.--k]="curVar(t.moneda)">
+          <div class="k-top"><span class="cur">{{ t.moneda }}</span><span class="muted">Total gastado</span></div>
+          <div class="k-val">{{ fmt.money(t.total, t.moneda) }}</div>
+          <div class="k-sub muted">{{ fmt.num(t.count) }} gastos · promedio {{ fmt.money(t.average, t.moneda) }}</div>
+          <div class="bar" role="img" [attr.aria-label]="'Aprobado ' + fmt.money(t.approvedTotal, t.moneda)"><i [style.width.%]="t.total ? t.approvedTotal / t.total * 100 : 0"></i></div>
+          <div class="k-foot"><span class="ok">Aprobado {{ fmt.money(t.approvedTotal, t.moneda, true) }}</span><span class="warn">Pendiente {{ fmt.money(t.pendingTotal, t.moneda, true) }}</span></div>
+        </article>
+      }
+      <article class="card kpi rise" style="--k: var(--ok)">
+        <div class="k-top"><span class="cur">%</span><span class="muted">Aprobados vs pendientes</span></div>
+        <div class="k-val">{{ fmt.pct(s.approval.approvedPct) }} <small class="muted">aprobado</small></div>
+        <div class="k-sub muted">{{ fmt.num(s.approval.approved) }} aprobados · {{ fmt.num(s.approval.pending) }} pendientes ({{ fmt.pct(s.approval.pendingPct) }})</div>
+        <div class="bar"><i [style.width.%]="s.approval.approvedPct"></i></div>
+      </article>
+    </section>
+
+    <section class="charts">
+      <article class="card span2 rise">
+        <div class="card-head"><div><h2>Evolución temporal · {{ cur() }}</h2><p>Gasto {{ granularity() === 'month' ? 'mensual' : 'semanal' }}, apilado en aprobado y pendiente. El último periodo puede estar incompleto.</p></div></div>
+        <app-chart [config]="lineChart()" [height]="290" label="Evolución temporal del gasto" />
+      </article>
+      <article class="card rise">
+        <div class="card-head"><div><h2>Aprobado vs pendiente</h2><p>Por número de gastos</p></div></div>
+        <app-chart [config]="approvalChart()" [height]="290" label="Porcentaje de gastos aprobados y pendientes" />
+      </article>
+      <article class="card rise">
+        <div class="card-head"><div><h2>Promedio por departamento · {{ cur() }}</h2><p>Gasto promedio por transacción</p></div></div>
+        <app-chart [config]="avgDeptChart()" [height]="270" label="Promedio de gasto por departamento" />
+      </article>
+      <article class="card rise">
+        <div class="card-head"><div><h2>Comparación de departamentos · {{ cur() }}</h2><p>Total acumulado</p></div></div>
+        <app-chart [config]="deptTotalChart()" [height]="270" label="Total de gasto por departamento" />
+      </article>
+      <article class="card rise">
+        <div class="card-head"><div><h2>Top categorías · {{ cur() }}</h2><p>Mayor consumo</p></div></div>
+        <app-chart [config]="categoryChart()" [height]="270" label="Categorías de mayor consumo" />
+      </article>
+      <article class="card span3 rise">
+        <div class="card-head"><div><h2>Métodos de pago · {{ cur() }}</h2><p>Distribución del monto</p></div></div>
+        <div class="pay">
+          <app-chart [config]="paymentChart()" [height]="250" label="Distribución por método de pago" />
+          <table class="mini"><thead><tr><th>Método</th><th class="r">Gastos</th><th class="r">Total</th></tr></thead><tbody>
+            @for (p of s.byPaymentMethod; track p.key + p.moneda) { @if (p.moneda === cur()) { <tr><td>{{ p.key }}</td><td class="r">{{ fmt.num(p.count) }}</td><td class="r">{{ fmt.money(p.total, p.moneda) }}</td></tr> } }
+          </tbody></table>
+        </div>
+      </article>
+    </section>
+
+    <section class="insights" aria-label="Smart Insights">
+      <div class="row" style="margin:26px 0 12px"><h2 style="font-size:17px">Smart Insights</h2><span class="badge plain">cálculos deterministas</span><span class="spacer"></span><a routerLink="/asistente" class="btn sm"><app-icon name="chat" [size]="14" /> Preguntar al asistente</a></div>
+      <div class="ins-grid">
+        @for (i of insights(); track i.id) {
+          <article class="card ins rise" [class.warn]="i.severity === 'warning'">
+            <div class="row"><span class="badge" [class.warn]="i.severity === 'warning'">{{ i.severity === 'warning' ? 'Atención' : 'Información' }}</span></div>
+            <h3>{{ i.title }}</h3>
+            <p class="muted">{{ i.detail }}</p>
+            @if (ranking(i).length) { <ul class="rk">@for (r of ranking(i).slice(0, 4); track r.departamento) { <li><span>{{ r.departamento }}</span><b [class.up]="r.cambioPct > 0">{{ r.cambioPct > 0 ? '+' : '' }}{{ r.cambioPct }}%</b></li> }</ul> }
+            @if (shares(i).length) { <ul class="rk">@for (r of shares(i); track r.clave) { <li><span>{{ r.clave }}</span><b>{{ r.porcentaje }}%</b></li> }</ul> }
+            @if (insightIds(i).length) { <div class="row ids">@for (id of insightIds(i); track id) { <a class="chip mono" routerLink="/gastos" [queryParams]="{ q: id }">#{{ id }}</a> }</div> }
+          </article>
+        }
+      </div>
+    </section>
+  }
+  </div>
+  }
+}

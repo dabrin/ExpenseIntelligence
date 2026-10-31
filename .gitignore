@@ -1,0 +1,9 @@
+bin/
+obj/
+node_modules/
+.angular/
+web/dist/
+src/ExpenseIntelligence.Api/wwwroot/
+data/working/
+*.user
+.DS_Store

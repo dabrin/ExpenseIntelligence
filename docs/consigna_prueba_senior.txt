@@ -1,0 +1,35 @@
+RETO TÉCNICO SENIOR: DASHBOARD ANALÍTICO & CRUD SOBRE DATASET JSON (.NET 8 / .NET 6)
+
+1. CONTEXTO Y OBJETIVO:
+Se requiere construir una solución completa en .NET (versión 6 u 8) que sirva como plataforma analítica y de gestión para un histórico desordenado de más de 10,000 registros de gastos corporativos provistos en el archivo `gastos_desordenados.json`.
+
+2. REQUERIMIENTOS FUNCIONALES:
+A. Origen de Datos & Persistencia:
+   - El archivo `gastos_desordenados.json` actúa como fuente de datos primaria.
+   - Debe implementarse un mecanismo seguro y concurrente para leer y persistir modificaciones directamente en el archivo JSON (o estructurar una capa de repositorio adecuada sin corromper el almacenamiento).
+
+B. Dashboard Interactivo con Filtros Avanzados:
+   - Visualización de métricas clave (KPIs): Total gastado agrupado por moneda, promedio de gasto por departamento, top categorías con mayor consumo y porcentaje de gastos aprobados vs pendientes.
+   - Sistema de filtros combinables y reactivos:
+     * Rango de fechas.
+     * Departamento(s).
+     * Categoría(s).
+     * Moneda y método de pago.
+     * Estado de aprobación.
+   - Paginación del lado del servidor o virtualización eficiente para manejar el volumen de registros sin degradar la memoria ni la latencia.
+
+C. Módulo CRUD (Gestión de Gastos):
+   - Formulario para registrar nuevos gastos con validaciones de modelo (montos positivos, fechas válidas, campos obligatorios).
+   - Edición en caliente de cualquier registro existente asegurando integridad referencial (ID único).
+   - Eliminación lógica o física con confirmación.
+   - Reflejo inmediato de los cambios en el archivo JSON subyacente.
+
+3. REQUERIMIENTOS TÉCNICOS Y CRITERIOS DE EVALUACIÓN:
+- Arquitectura limpia (separación de responsabilidades: API / Backend, Servicios, Capa de Acceso a Datos / Repositorio y Frontend / Vistas).
+- Eficiencia y rendimiento: manejo óptimo de streaming / deserialización (evitar bloquear el Garbage Collector al manipular archivos grandes).
+- Manejo de concurrencia al escribir en el JSON (locks / semáforos o colas de persistencia).
+- Tratamiento de excepciones y logging estructurado.
+- Uso creativo de herramientas de IA: se evaluará la agilidad y precisión para diagnosticar anomalías, estructurar el scaffolding y entregar una solución productiva en tiempo récord.
+
+NOTA DE INCIDENCIA PREVIA:
+El equipo de ingesta de datos reportó una inconsistencia en la fuente original. Valide la integridad del archivo antes de iniciar el procesamiento.

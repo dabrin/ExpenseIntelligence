@@ -8,11 +8,17 @@ Requisitos: **.NET SDK 8** y **Node 20+**.
 
 ```bash
 git clone https://github.com/dabrin/ExpenseIntelligence.git && cd ExpenseIntelligence
-./install.sh   # verifica o instala .NET 8 y Node 20+, paquetes npm y NuGet, y compila el frontend
-./run.sh
 ```
 
-`install.sh` es seguro de repetir (omite lo ya instalado). `run.sh` compila el frontend la primera vez y levanta todo en **http://localhost:5080** (Swagger en `/swagger`).
+Cada sistema tiene su carpeta con dos scripts: `install` (una vez) y `run`.
+
+| Sistema | Instalar (una vez) | Arrancar |
+|---|---|---|
+| macOS | `./for-mac/install.sh` | `./for-mac/run.sh` |
+| Linux | `./for-linux/install.sh` | `./for-linux/run.sh` |
+| Windows | doble clic en `for-windows\install.bat` (o `.\for-windows\install.ps1` en PowerShell) | doble clic en `for-windows\run.bat` (o `.\for-windows\run.ps1`) |
+
+`install` verifica o instala .NET 8 y Node 20+ (Homebrew en Mac, script oficial de Microsoft en Linux, winget en Windows), los paquetes npm y NuGet, y compila el frontend. Es seguro de repetir. `run` levanta todo en **http://localhost:5080** (Swagger en `/swagger`). En Linux, si falta Node 20+, instálalo tú (NodeSource o nvm) y repite.
 
 La primera vez la app crea su copia de trabajo en `data/working/` a partir del archivo original `data/original/gastos_desordenados.json`. El original **nunca se modifica**.
 
@@ -22,7 +28,7 @@ Pruebas automáticas:
 dotnet test
 ```
 
-Reiniciar el servidor: detén el proceso (Ctrl+C) y vuelve a ejecutar `./run.sh`. Solo puede haber **una instancia por carpeta de datos**.
+Reiniciar el servidor: detén el proceso (Ctrl+C) y vuelve a ejecutar el `run` de tu sistema. Solo puede haber **una instancia por carpeta de datos**.
 
 ## 2. Recorrido por las pantallas
 

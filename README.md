@@ -117,10 +117,10 @@ Estos números son de una corrida y varían con la máquina; los umbrales de las
 
 ## Limitaciones conocidas
 
-- **Un solo proceso** por directorio de datos (ver arriba). Sin autenticación/autorización: el `actor` de auditoría es un encabezado informativo (`X-Actor`).
+- **Un solo proceso** por directorio de datos (ver arriba). Sin usuarios ni roles: solo una contraseña compartida opcional (`APP_PASSWORD`); el `actor` de auditoría es un encabezado informativo (`X-Actor`).
 - Cada escritura **reescribe el archivo completo** (~3,4 MB): 14 ms/escritura medidos, pero crece linealmente con el volumen. En la prueba de 100 escrituras se observaron 10 recolecciones gen2 (el snapshot nuevo reconstruye un diccionario de 10 k entradas); es aceptable aquí, pero sería lo primero a optimizar (snapshot incremental).
 - Los registros reparados/cuarentena se evalúan solo al cargar; el Data Doctor sobre datos en vivo no repite el diagnóstico de ingesta.
-- El **asistente no es un LLM**: solo reconoce las intenciones listadas. «Este mes» usa el mes calendario actual y, si no tiene datos, el último mes con datos (lo indica en la respuesta). El último mes de los datos (2026-10) está incompleto (llega al 13).
+- El **modo de reglas del asistente no es un LLM** (el modo IA es opcional): solo reconoce las intenciones listadas. «Este mes» usa el mes calendario actual y, si no tiene datos, el último mes con datos (lo indica en la respuesta). El último mes de los datos (2026-10) está incompleto (llega al 13).
 - No hay pruebas automatizadas del frontend (unitarias o E2E); el frontend se verificó compilando y manualmente en el navegador integrado. Las rutas que usa están cubiertas por las pruebas de API.
 - Montos CRC con escala sospechosa (ver hallazgo 3): se reportan, no se corrigen.
 

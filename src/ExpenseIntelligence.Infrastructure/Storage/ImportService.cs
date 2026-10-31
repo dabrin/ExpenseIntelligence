@@ -88,7 +88,11 @@ public sealed class ImportService(JsonExpenseStore store, DatasetService dataset
             File.SetAttributes(saved, FileAttributes.ReadOnly);
 
             int added = items.Count, skipped = 0;
-            if (mode == "merge") (added, skipped) = await store.MergeAsync(items, name, actor, ct);
+            if (mode == "merge")
+            {
+                (added, skipped) = await store.MergeAsync(items, name, actor, ct);
+                if (added == 0) { File.SetAttributes(saved, FileAttributes.Normal); File.Delete(saved); } // nothing applied: no orphan copy
+            }
             else
             {
                 var info = new DatasetInfo(JsonExpenseStore.NewDatasetId(), name, sha, bytes.Length, clock.GetUtcNow(), saved, false, items.Count(e => !e.Eliminado));

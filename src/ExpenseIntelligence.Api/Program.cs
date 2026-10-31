@@ -116,6 +116,8 @@ if (!string.IsNullOrEmpty(appPassword))
     });
 }
 
+static IResult DemoBlocked() => Results.Json(new { title = "Acción deshabilitada en el modo demo público.", status = 403 }, statusCode: StatusCodes.Status403Forbidden);
+
 if (publicDemo)
 {
     app.Use(async (ctx, next) =>
@@ -205,12 +207,17 @@ api.MapPost("/import/preview", async (IFormFile file, ImportService imp, Cancell
     return Results.Ok(await imp.PreviewAsync(stream, file.FileName, ct));
 }).DisableAntiforgery().WithTags("Import");
 api.MapPost("/import/commit", async (ImportCommit body, ImportService imp, HttpContext ctx, CancellationToken ct) =>
-    Results.Ok(await imp.CommitAsync(body.Token ?? "", body.Mode ?? (body.Replace == false ? "merge" : "new"), body.DatasetId, Actor(ctx), ct))).WithTags("Import");
+{
+    var mode = body.Mode ?? (body.Replace == false ? "merge" : "new");
+    if (publicDemo && mode == "reset") return DemoBlocked();
+    return Results.Ok(await imp.CommitAsync(body.Token ?? "", mode, body.DatasetId, Actor(ctx), ct));
+}).WithTags("Import");
 
 // ---------- uploaded files (datasets) ----------
 api.MapGet("/datasets", (DatasetService d) => d.List()).WithTags("Datasets");
 api.MapPost("/datasets/{id}/activate", async (string id, DatasetActivate? body, IExpenseStore store, DatasetService d, JsonExpenseStore js, HttpContext ctx, CancellationToken ct) =>
 {
+    if (publicDemo && (body?.Reset ?? false)) return DemoBlocked();
     var ds = await js.ActivateAsync(id, body?.Reset ?? false, Actor(ctx), ct);
     return Results.Ok(d.Summarize(ds));
 }).WithTags("Datasets");

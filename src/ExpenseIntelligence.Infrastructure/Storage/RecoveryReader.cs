@@ -15,6 +15,11 @@ namespace ExpenseIntelligence.Infrastructure.Storage;
 /// </summary>
 public static partial class RecoveryReader
 {
+    private const int MaxIssues = 200;           // issues kept in the report; the full count is still reported
+    private const int MaxRawChars = 2000;
+    private const decimal MaxAbsMonto = 1e12m;   // far above any real expense, far below what makes decimal sums overflow
+    private static string Clip(string s) => s.Length <= MaxRawChars ? s : s[..MaxRawChars];
+
     // JSON strings can never contain a raw newline, so resetting the "in string" state at '\n' is exact for valid JSON
     // and keeps a stray quote (e.g.  id": 1407 ) from desynchronising the scanner for the rest of the file.
     public static (List<Expense> Items, LoadReport Report) Read(byte[] bytes, string source, TimeProvider clock)
@@ -90,14 +95,14 @@ public static partial class RecoveryReader
                     catch (Exception ex2) when (ex2 is JsonException or FormatException or InvalidDataException) { failure = ex2.Message; }
                 }
                 if (failure is not null)
-                    issues.Add(new(objects - 1, startLine, failure, TryIdHint(text), text));
+                    issues.Add(new(objects - 1, startLine, failure, TryIdHint(text), Clip(text)));
             }
             if (e is null) continue;
 
             if (seen.TryGetValue(e.Id, out var firstLine))
             {
                 dupIds++;
-                issues.Add(new(objects - 1, startLine, $"ID duplicado {e.Id} (primera aparición en línea {firstLine}); se conserva la primera.", e.Id.ToString(), Encoding.UTF8.GetString(chunk)));
+                issues.Add(new(objects - 1, startLine, $"ID duplicado {e.Id} (primera aparición en línea {firstLine}); se conserva la primera.", e.Id.ToString(), Clip(Encoding.UTF8.GetString(chunk))));
                 continue;
             }
             seen[e.Id] = startLine;
@@ -110,7 +115,7 @@ public static partial class RecoveryReader
 
     private static LoadReport Build(string source, long len, string sha, bool truncated, int objects, int dupIds, List<LoadRepair> repairs,
         List<LoadIssue> issues, int loaded, System.Diagnostics.Stopwatch sw, TimeProvider clock) =>
-        new(source, "object-scan + deterministic-repair + quarantine", len, sha, truncated, objects, loaded, repairs.Count, issues.Count, dupIds, repairs, issues,
+        new(source, "object-scan + deterministic-repair + quarantine", len, sha, truncated, objects, loaded, repairs.Count, issues.Count, dupIds, repairs, issues.Take(MaxIssues).ToList(),
             clock.GetUtcNow(), Math.Round(sw.Elapsed.TotalMilliseconds, 1));
 
     [GeneratedRegex(@"(?m)^(?<ws>[ \t]*)(?<k>[A-Za-z_][A-Za-z0-9_]*)""(?<rest>[ \t]*:)")]
@@ -157,10 +162,11 @@ public static partial class RecoveryReader
         var id = Req("id", JsonValueKind.Number);
         if (!id.TryGetInt32(out var idv)) throw new InvalidDataException("'id' no es un entero.");
         var monto = Req("monto", JsonValueKind.Number);
-        if (!monto.TryGetDecimal(out var montov)) throw new InvalidDataException("'monto' no es un decimal válido.");
+        if (!monto.TryGetDecimal(out var montov) || Math.Abs(montov) > MaxAbsMonto) throw new InvalidDataException("'monto' no es un decimal válido.");
         var fechaS = Req("fecha", JsonValueKind.String).GetString()!;
         if (!DateOnly.TryParseExact(fechaS, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var fecha))
             throw new InvalidDataException($"'fecha' inválida: '{fechaS}'.");
+        if (fecha.Year is < 1900 or > 2100) throw new InvalidDataException($"'fecha' fuera de rango: '{fechaS}'.");
 
         DateTimeOffset? upd = null;
         if (r.TryGetProperty("actualizado_en", out var u) && u.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(u.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var du)) upd = du;

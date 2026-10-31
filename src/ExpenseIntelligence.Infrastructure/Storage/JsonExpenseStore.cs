@@ -335,7 +335,14 @@ public sealed partial class JsonExpenseStore : IExpenseStore, IDisposable
         if (!File.Exists(_audit)) return [];
         string[] lines;
         using (var fs = new FileStream(_audit, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-        using (var sr = new StreamReader(fs)) lines = sr.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        {
+            const long tail = 2L * 1024 * 1024; // only the end of the log is ever shown
+            var cut = fs.Length > tail;
+            if (cut) fs.Seek(-tail, SeekOrigin.End);
+            using var sr = new StreamReader(fs);
+            var all = sr.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            lines = cut ? all.Skip(1).ToArray() : all; // first line may be cut in half
+        }
         return lines.TakeLast(Math.Clamp(take, 1, 500)).Reverse()
             .Select(l => JsonSerializer.Deserialize<AuditEntry>(l, AuditJson)!).ToList();
     }

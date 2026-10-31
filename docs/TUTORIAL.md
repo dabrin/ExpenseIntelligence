@@ -104,10 +104,12 @@ Un gasto rechazado deja de contar como pendiente. Para reabrirlo, usa **Volver a
 
 Para probar la tolerancia a datos sucios (fechas inválidas, duplicados, JSON truncado, etc.) usa los archivos de la carpeta [`archivosprueba/`](../archivosprueba/README.md).
 
-## 7. Data Doctor, Asistente y Diagnóstico
+## 7. Dashboard interactivo, Data Doctor, Asistente y Diagnóstico
+
+- **Dashboard**: los gráficos son clickeables. Un clic en una barra o sector (departamento, categoría, método de pago, estado o mes) abre **Gastos** con ese filtro aplicado. Cada gráfico tiene una tabla alternativa para teclado y lectores de pantalla. Los **Smart Insights** se agrupan en Alertas, Tendencias y Distribución, ordenados por relevancia: se ven 5 y el resto con «Ver todos». La evolución temporal separa aprobados, pendientes y rechazados, y marca los períodos incompletos. El menú **Vista** oculta secciones y cambia línea/barras; se recuerda en tu navegador.
 
 - **Data Doctor**: muestra anomalías (duplicados, fechas, formatos, etc.) con causa y recomendación. Las marcadas como autocorregibles se aplican con un clic y quedan en el Historial.
-- **Asistente**: prueba preguntas como "¿cuál es el total gastado por moneda?" o "¿qué gastos siguen pendientes?". Respeta los filtros activos.
+- **Asistente (Prestamito)**: vive en un **chat flotante** (botón redondo abajo a la derecha, con Prestamito a su lado) disponible en todas las pantallas; la conversación se conserva al navegar y al recargar. Prueba preguntas como "¿cuál es el total gastado por moneda?" o "¿qué gastos siguen pendientes?", o pídele que te lleve: «llévame a los gastos pendientes» abre la pantalla con los filtros ya aplicados. También explica cómo hacer cosas en la app. Respeta los filtros activos.
 - **Diagnóstico**: ejecuta el chequeo de integridad (memoria vs disco), un benchmark y muestra la auditoría reciente.
 
 ## 8. Dónde quedan los datos
@@ -176,3 +178,27 @@ Configura estas variables en Railway (Variables). La contraseña la defines tú 
 | `PUBLIC_DEMO=true` | Desactiva Swagger y bloquea «Dejar el sistema limpio» y la eliminación de archivos (responden 403). |
 
 Sin `APP_PASSWORD` la app queda abierta: cualquiera con la URL podría editar y borrar datos. Usa HTTPS (Railway lo da por defecto), porque Basic Auth envía las credenciales codificadas, no cifradas.
+
+## 11. Cómo se construyó con IA
+
+El proyecto se desarrolló con un asistente de IA de código (Claude Code) trabajando sobre el repositorio, con una persona dirigiendo, revisando y decidiendo. El flujo fue siempre el mismo:
+
+1. **Diagnóstico primero.** Antes de escribir código se analizó el archivo del reto (`docs/DATA_FORENSICS.md`): JSON malformado, duplicados, fechas y montos sospechosos. Cada hallazgo quedó con evidencia.
+2. **Scaffolding por capas** (API, Application, Domain, Infrastructure, Tests y Angular), con pruebas junto al código. La suite actual tiene 137 pruebas en .NET y 3 en el frontend.
+3. **Iteración con verificación real.** Cada cambio se compila y se prueba, y los cambios de interfaz se revisan en un navegador integrado (clics, consola, red, vista móvil), no solo se dan por buenos.
+4. **Decisiones explícitas de la persona.** Los commits, los despliegues y las claves los maneja la persona; la IA no sube nada ni toca secretos.
+5. **Límites honestos.** Lo que no se pudo verificar se anota (ver «Limitaciones conocidas» del README) en lugar de afirmarse.
+
+El asistente de la propia app (Prestamito) usa un modelo de OpenAI, pero con herramientas acotadas (sección 10), de modo que la IA ayuda a consultar y navegar sin poder alterar datos.
+
+## 12. Seguridad
+
+Lo que hay hoy y se puede comprobar en el código y el CI:
+
+- **Asistente de solo lectura.** El modelo solo dispone de herramientas de consulta; las cifras las calcula el servidor. La navegación (`open_page`) solo acepta una lista blanca de pantallas propias y los filtros solo se aplican donde tienen sentido; hay pruebas que lo cubren. Presupuesto de 30 consultas por 10 minutos y caída al modo de reglas.
+- **Acceso al despliegue.** `APP_PASSWORD` activa Basic Auth y `PUBLIC_DEMO=true` desactiva Swagger y las operaciones destructivas (sección 10). Las claves van solo en variables de entorno, nunca en el repositorio.
+- **Integridad de datos.** Concurrencia optimista (409), una sola escritura por lote, auditoría de cada cambio, archivo original de solo lectura y verificación de integridad en Diagnóstico.
+- **CI** (`.github/workflows/ci.yml`): ejecuta las pruebas y compila el frontend en cada push, y revisa paquetes NuGet y npm con vulnerabilidades conocidas (informativo, no bloquea).
+- **Skill de auditoría.** El repositorio incluye la skill `security-audit` (`.agents/skills/security-audit/`) como guía de revisión para agentes de IA. Su presencia no equivale a un informe de auditoría completo: no se ha generado un informe de hallazgos.
+
+Pendiente o fuera de alcance: sin usuarios ni roles (solo una contraseña compartida), y el `actor` de auditoría es informativo. Si se publica la URL, mantén `APP_PASSWORD` activo.

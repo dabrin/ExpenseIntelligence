@@ -7,11 +7,12 @@ Gu√≠a paso a paso para instalar, ejecutar y usar el proyecto. Para el detalle t√
 Requisitos: **.NET SDK 8** y **Node 20+**.
 
 ```bash
-git clone <url-del-repo> && cd ExpenseIntelligence
+git clone https://github.com/dabrin/ExpenseIntelligence.git && cd ExpenseIntelligence
+./install.sh   # verifica o instala .NET 8 y Node 20+, paquetes npm y NuGet, y compila el frontend
 ./run.sh
 ```
 
-`run.sh` compila el frontend la primera vez y levanta todo en **http://localhost:5080** (Swagger en `/swagger`).
+`install.sh` es seguro de repetir (omite lo ya instalado). `run.sh` compila el frontend la primera vez y levanta todo en **http://localhost:5080** (Swagger en `/swagger`).
 
 La primera vez la app crea su copia de trabajo en `data/working/` a partir del archivo original `data/original/gastos_desordenados.json`. El original **nunca se modifica**.
 

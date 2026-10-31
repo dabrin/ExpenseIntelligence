@@ -11,7 +11,8 @@ Identidad visual: azul marino y verde (paleta inspirada en Instacredit), modo cl
 Requisitos: .NET SDK 8, Node 20+ (probado con Node 24 y Angular CLI 17).
 
 ```bash
-./run.sh                 # compila el frontend (1.ª vez) y levanta todo en http://localhost:5080
+./install.sh             # una vez: instala/verifica .NET 8 y Node, paquetes npm y NuGet, y compila el frontend
+./run.sh                 # levanta todo en http://localhost:5080
 ```
 
 Manual:

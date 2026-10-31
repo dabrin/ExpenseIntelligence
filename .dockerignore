@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/.angular/
+web/dist/
+src/ExpenseIntelligence.Api/wwwroot/
+data/working/
+.git/
+.DS_Store
+tests/**/bin/
+tests/**/obj/

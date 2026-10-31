@@ -110,3 +110,23 @@ Un gasto rechazado deja de contar como pendiente. Para volver a aprobarlo, edít
 | No puedo editar el monto de un gasto | Está aprobado: quita la aprobación y guarda. |
 | El lote masivo respondió 409 | Los datos cambiaron: recarga y vuelve a seleccionar. |
 | Quiero empezar de cero | Archivos → Dejar el sistema limpio. |
+
+## 10. Docker y Railway
+
+El `Dockerfile` compila el Angular, publica la API y empaqueta el original en `/app/seed`. Los datos vivos van a `/data`, que **debe ser un volumen persistente**: sin volumen, cada despliegue empieza de cero.
+
+```bash
+docker build -t insta-expenses .
+docker run --rm -p 8080:8080 -v expenses-data:/data insta-expenses   # http://localhost:8080
+```
+
+En Railway:
+
+1. New Project → Deploy from GitHub repo → `dabrin/ExpenseIntelligence` (usa `railway.json` y el `Dockerfile`).
+2. En el servicio: Settings → Volumes → añade un volumen con mount path `/data`.
+3. Settings → Networking → Generate Domain.
+4. Mantén **1 réplica**: la app solo admite una instancia por carpeta de datos (`railway.json` ya lo fija).
+
+Railway inyecta `PORT`; el contenedor lo usa automáticamente. Comprobación de salud: `/api/health`.
+
+> La app no tiene autenticación: cualquiera con la URL puede editar, eliminar y ejecutar "Dejar el sistema limpio".

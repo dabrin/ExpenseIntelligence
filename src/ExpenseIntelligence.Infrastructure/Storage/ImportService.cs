@@ -17,7 +17,9 @@ public sealed record ImportResult(string Mode, int Records, int Skipped, int Rep
 /// </summary>
 public sealed class ImportService(JsonExpenseStore store, DatasetService datasets, DataDoctorService doctor, IOptions<StorageOptions> options, TimeProvider clock, ILogger<ImportService> log)
 {
-    public const long MaxBytes = 100L * 1024 * 1024;
+    public const long MaxBytes = 25L * 1024 * 1024;
+    private const int MaxPendingFiles = 20;
+    private static readonly TimeSpan PendingTtl = TimeSpan.FromHours(1);
     private string Dir => Path.Combine(Path.GetFullPath(options.Value.WorkingDirectory), "imports");
     private string Pending => Path.Combine(Dir, "pending");
 
@@ -34,6 +36,7 @@ public sealed class ImportService(JsonExpenseStore store, DatasetService dataset
         if (bytes.Length == 0) throw Invalid("El archivo está vacío.");
 
         var name = SafeName(fileName);
+        PrunePending();
         var (items, report) = RecoveryReader.Read(bytes, name, clock);
         var active = items.Where(e => !e.Eliminado).ToList();
         var token = Guid.NewGuid().ToString("N");
@@ -97,6 +100,17 @@ public sealed class ImportService(JsonExpenseStore store, DatasetService dataset
         foreach (var f in Directory.GetFiles(Pending, token + ".*")) File.Delete(f);
         log.LogInformation("Import {Name} applied as {Mode}: {Loaded} loaded, {Repaired} repaired, {Quarantined} quarantined", name, mode, report.Loaded, report.Repaired, report.Quarantined);
         return result;
+    }
+
+    /// <summary>Uploads that were previewed but never confirmed would pile up on disk: drop the expired ones and keep at most <see cref="MaxPendingFiles"/> (oldest first).</summary>
+    private void PrunePending()
+    {
+        if (!Directory.Exists(Pending)) return;
+        var now = clock.GetUtcNow().UtcDateTime;
+        var files = new DirectoryInfo(Pending).GetFiles("*.json").OrderBy(f => f.LastWriteTimeUtc).ToList();
+        var keep = files.Where(f => now - f.LastWriteTimeUtc <= PendingTtl).ToList();
+        foreach (var f in files.Except(keep).Concat(keep.Take(Math.Max(0, keep.Count - (MaxPendingFiles - 1)))))
+            try { File.Delete(f.FullName); File.Delete(Path.ChangeExtension(f.FullName, ".name")); } catch (IOException) { /* best effort */ }
     }
 
     private static string SafeName(string n)

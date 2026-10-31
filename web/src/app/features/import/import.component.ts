@@ -18,7 +18,7 @@ import { IconComponent } from '../../shared/icon.component';
       <input type="file" accept=".json,application/json" class="sr-only" (change)="onPick($event)" [disabled]="busy()" />
       <app-icon name="upload" [size]="34" />
       @if (busy()) { <strong>Analizando archivo…</strong><span class="skeleton" style="width:200px;height:10px"></span> }
-      @else { <strong>Arrastra tu archivo .json aquí o haz clic para elegirlo</strong><span class="muted">Formato: arreglo JSON con id, descripcion, monto, moneda, categoria, departamento, metodo_pago, fecha, aprobado, codigo_factura · máx. 100 MB</span> }
+      @else { <strong>Arrastra tu archivo .json aquí o haz clic para elegirlo</strong><span class="muted">Formato: arreglo JSON con id, descripcion, monto, moneda, categoria, departamento, metodo_pago, fecha, aprobado, codigo_factura · máx. 25 MB</span> }
     </label>
     @if (error()) { <div class="banner bad" role="alert" style="margin-top:14px"><app-icon name="alert" /><span>{{ error() }}</span></div> }
   } @else {

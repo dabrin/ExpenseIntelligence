@@ -51,6 +51,21 @@ public class ExportTests
     }
 
     [Fact]
+    public void Currency_with_a_formula_is_neutralised_in_csv_and_xlsx()
+    {
+        using var sb = new Sandbox(Sandbox.Json([Sandbox.Rec(1, moneda: "=1+1", aprobado: false)]));
+        var x = Svc(sb, out var st); using var _ = st;
+        var csv = Encoding.UTF8.GetString(x.Export(ExpenseFilter.None, "csv").Content);
+        Assert.Contains(",'=1+1,", csv);
+        using var wb = new ClosedXML.Excel.XLWorkbook(new MemoryStream(x.Export(ExpenseFilter.None, "xlsx").Content));
+        foreach (var cell in new[] { wb.Worksheet("Gastos").Cell(2, 8), wb.Worksheet("Resumen").CellsUsed().First(c => c.GetString().Contains("=1+1")) })
+        {
+            Assert.False(cell.HasFormula);                                              // stored as text, never evaluated
+            Assert.Equal(ClosedXML.Excel.XLDataType.Text, cell.DataType);
+        }
+    }
+
+    [Fact]
     public void Rejected_reason_and_empty_results_export_cleanly_and_bad_format_is_refused()
     {
         using var sb = new Sandbox(); var x = Svc(sb, out var st); using var _ = st;

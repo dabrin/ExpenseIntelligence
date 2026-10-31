@@ -39,7 +39,7 @@ public sealed class ExportService(IExpenseStore store, AnalyticsService analytic
         foreach (var e in rows)
             sb.Append(e.Id.ToString(CultureInfo.InvariantCulture)).Append(',').Append(e.Fecha.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append(',')
               .Append(Q(e.Descripcion)).Append(',').Append(Q(e.Departamento)).Append(',').Append(Q(e.Categoria)).Append(',').Append(Q(e.MetodoPago)).Append(',')
-              .Append(Q(e.CodigoFactura)).Append(',').Append(e.Moneda).Append(',').Append(e.Monto.ToString("0.00", CultureInfo.InvariantCulture)).Append(',')
+              .Append(Q(e.CodigoFactura)).Append(',').Append(Q(e.Moneda)).Append(',').Append(e.Monto.ToString("0.00", CultureInfo.InvariantCulture)).Append(',')
               .Append(e.Estado).Append(',').Append(Q(e.MotivoRechazo)).Append("\r\n");
         return new UTF8Encoding(true).GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray(); // BOM so Excel reads accents correctly
     }
@@ -69,7 +69,7 @@ public sealed class ExportService(IExpenseStore store, AnalyticsService analytic
         foreach (var t in sum.Totals)
         {
             var rej = sum.Approval.ByCurrency.FirstOrDefault(x => x.Moneda == t.Moneda)?.RejectedTotal ?? 0;
-            rs.Cell(r, 1).Value = t.Moneda; rs.Cell(r, 2).Value = t.Count; rs.Cell(r, 3).Value = t.Total; rs.Cell(r, 4).Value = t.Average; rs.Cell(r, 5).Value = t.Max;
+            rs.Cell(r, 1).Value = Safe(t.Moneda); rs.Cell(r, 2).Value = t.Count; rs.Cell(r, 3).Value = t.Total; rs.Cell(r, 4).Value = t.Average; rs.Cell(r, 5).Value = t.Max;
             rs.Cell(r, 6).Value = t.ApprovedTotal; rs.Cell(r, 7).Value = t.PendingTotal; rs.Cell(r, 8).Value = rej; r++;
         }
         rs.Range(top, 3, r - 1, 8).Style.NumberFormat.Format = "#,##0.00";
@@ -84,7 +84,7 @@ public sealed class ExportService(IExpenseStore store, AnalyticsService analytic
             Head(rs.Range(r, 1, r, hh.Length)); r++;
             var first = r;
             foreach (var d in data.OrderBy(x => x.Moneda, StringComparer.Ordinal).ThenByDescending(x => x.Total))
-            { rs.Cell(r, 1).Value = Safe(d.Key); rs.Cell(r, 2).Value = d.Moneda; rs.Cell(r, 3).Value = d.Count; rs.Cell(r, 4).Value = d.Total; rs.Cell(r, 5).Value = d.Average; r++; }
+            { rs.Cell(r, 1).Value = Safe(d.Key); rs.Cell(r, 2).Value = Safe(d.Moneda); rs.Cell(r, 3).Value = d.Count; rs.Cell(r, 4).Value = d.Total; rs.Cell(r, 5).Value = d.Average; r++; }
             if (r > first) rs.Range(first, 4, r - 1, 5).Style.NumberFormat.Format = "#,##0.00";
             r++;
         }
@@ -101,7 +101,7 @@ public sealed class ExportService(IExpenseStore store, AnalyticsService analytic
             ws.Cell(row, 1).Value = e.Id;
             ws.Cell(row, 2).Value = e.Fecha.ToDateTime(TimeOnly.MinValue);
             ws.Cell(row, 3).Value = Safe(e.Descripcion); ws.Cell(row, 4).Value = Safe(e.Departamento); ws.Cell(row, 5).Value = Safe(e.Categoria);
-            ws.Cell(row, 6).Value = Safe(e.MetodoPago); ws.Cell(row, 7).Value = Safe(e.CodigoFactura); ws.Cell(row, 8).Value = e.Moneda;
+            ws.Cell(row, 6).Value = Safe(e.MetodoPago); ws.Cell(row, 7).Value = Safe(e.CodigoFactura); ws.Cell(row, 8).Value = Safe(e.Moneda);
             ws.Cell(row, 9).Value = e.Monto; ws.Cell(row, 10).Value = e.Estado; ws.Cell(row, 11).Value = Safe(e.MotivoRechazo);
             row++;
         }

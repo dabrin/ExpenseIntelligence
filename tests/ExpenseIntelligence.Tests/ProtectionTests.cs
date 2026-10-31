@@ -55,4 +55,26 @@ public class ProtectionTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, (await c.DeleteAsync("/api/datasets/x")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/api/expenses")).StatusCode);
     }
+
+    [Fact]
+    public async Task Responses_carry_security_headers_and_health_is_minimal()
+    {
+        var r = await Client(null, false).GetAsync("/api/health");
+        Assert.Equal("nosniff", r.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal("DENY", r.Headers.GetValues("X-Frame-Options").Single());
+        Assert.Equal("""{"status":"ok"}""", await r.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Audit_actor_is_prefixed_with_the_authenticated_user_and_cannot_be_spoofed()
+    {
+        var c = Client("s3cret", false);
+        c.DefaultRequestHeaders.Authorization = Basic("evaluador", "s3cret");
+        c.DefaultRequestHeaders.Add("X-Actor", "director-general");
+        var body = JsonContent.Create(new { descripcion = "Prueba actor", monto = 10m, moneda = "usd", categoria = "hardware", departamento = "tecnologia", metodoPago = "paypal", fecha = "2026-10-01", aprobado = false, codigoFactura = "fac-77777" });
+        Assert.Equal(HttpStatusCode.Created, (await c.PostAsync("/api/expenses", body)).StatusCode);
+        var audit = await c.GetStringAsync("/api/audit");
+        Assert.Contains("evaluador/director-general", audit);
+        Assert.DoesNotContain("\"director-general\"", audit);
+    }
 }

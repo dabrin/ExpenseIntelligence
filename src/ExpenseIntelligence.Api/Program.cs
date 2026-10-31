@@ -64,6 +64,14 @@ app.UseExceptionHandler(err => err.Run(async ctx =>
 
 app.Use(async (ctx, next) =>
 {
+    ctx.Response.Headers.XContentTypeOptions = "nosniff";
+    ctx.Response.Headers.XFrameOptions = "DENY";
+    ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
+    await next();
+});
+
+app.Use(async (ctx, next) =>
+{
     var start = Stopwatch.GetTimestamp();
     try { await next(); }
     finally
@@ -101,6 +109,7 @@ if (!string.IsNullOrEmpty(appPassword))
             }
             catch (FormatException) { }
         }
+        if (header.Length > 0) await Task.Delay(500); // slows down password guessing
         ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
         ctx.Response.Headers.WWWAuthenticate = "Basic realm=\"Insta Expenses\", charset=\"UTF-8\"";
     });
@@ -131,7 +140,12 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 var api = app.MapGroup("/api");
-static string Actor(HttpContext c) => c.Request.Headers.TryGetValue("X-Actor", out var a) && !string.IsNullOrWhiteSpace(a) ? a.ToString()[..Math.Min(a.ToString().Length, 60)] : "api";
+// With authentication on, the audit actor starts with the authenticated user: the X-Actor header (client-controlled) is only a suffix.
+string Actor(HttpContext c)
+{
+    var label = c.Request.Headers.TryGetValue("X-Actor", out var a) && !string.IsNullOrWhiteSpace(a) ? a.ToString()[..Math.Min(a.ToString().Length, 40)] : "api";
+    return string.IsNullOrEmpty(appPassword) ? label : $"{appUser}/{label}";
+}
 
 // ---------- expenses ----------
 api.MapGet("/expenses", ([AsParameters] ExpenseQueryParams p, ExpenseQueryService q) => q.Query(p.ToPageQuery())).WithTags("Expenses");
@@ -257,7 +271,7 @@ api.MapPost("/diagnostics/benchmark", (ExpenseQueryService q, AnalyticsService a
     return new { records = store.Current.Active.Count, results };
 }).WithTags("Diagnostics");
 
-api.MapGet("/health", (IExpenseStore s) => new { status = "ok", revision = s.Current.Revision, records = s.Current.Active.Count });
+api.MapGet("/health", () => new { status = "ok" });
 api.MapFallback(() => Results.NotFound(new { title = "Unknown API route" }));
 app.MapFallbackToFile("index.html");
 

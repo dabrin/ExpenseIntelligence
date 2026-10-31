@@ -3,12 +3,38 @@ using ExpenseIntelligence.Domain;
 
 namespace ExpenseIntelligence.Application;
 
-public sealed record Insight(string Id, string Type, string Severity, string Title, string Detail, Dictionary<string, object?> Data);
+/// <summary>Category: alertas | tendencias | distribucion. Priority: higher = more relevant (warnings first); the UI only sorts by it.</summary>
+public sealed record Insight(string Id, string Type, string Severity, string Title, string Detail, Dictionary<string, object?> Data, string Category = "distribucion", int Priority = 0);
 
 /// <summary>Smart Insights: every conclusion is a deterministic calculation over the live snapshot and exposes the numbers behind it.</summary>
 public sealed class InsightsService(IExpenseStore store)
 {
-    private static string N(decimal v) => v.ToString("N2", CultureInfo.InvariantCulture);
+    /// <summary>Spanish number format (decimal comma, non-breaking space for thousands) without depending on ICU data being present on the host.</summary>
+    private static readonly CultureInfo Es = BuildEs();
+    private static CultureInfo BuildEs()
+    {
+        var c = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+        c.NumberFormat.NumberDecimalSeparator = ","; c.NumberFormat.NumberGroupSeparator = "\u00A0";
+        c.NumberFormat.PercentDecimalSeparator = ","; c.NumberFormat.PercentGroupSeparator = "\u00A0";
+        return c;
+    }
+    private static string T(FormattableString s) => s.ToString(Es);
+    private static string N(decimal v) => v.ToString("N2", Es);
+
+    private static (string Category, int Priority) Classify(Insight i)
+    {
+        var warn = i.Severity == "warning";
+        var magnitude = i.Data.TryGetValue("cambioPct", out var c) && c is double d ? (int)Math.Min(Math.Abs(d), 50) : 0;
+        return i.Type switch
+        {
+            "backlog" => ("alertas", warn ? 100 : 60),
+            "outlier" => ("alertas", warn ? 95 : 20),
+            "duplicates" => ("alertas", warn ? 90 : 15),
+            "period-change" => warn ? ("alertas", 80 + magnitude / 5) : ("tendencias", 50),
+            "growth" => ("tendencias", warn ? 75 : 45), // department growth is a trend even when it is large
+            _ => ("distribucion", warn ? 55 : 30), // concentration
+        };
+    }
 
     public (long Revision, List<Insight> Insights) Generate(ExpenseFilter filter)
     {
@@ -24,7 +50,10 @@ public sealed class InsightsService(IExpenseStore store)
         Outliers(rows, list);
         PossibleDuplicates(rows, list);
         PendingBacklog(rows, anchor, list);
-        return (snap.Revision, list);
+        // Trends that are merely informative stay under "tendencias"; any warning is promoted to "alertas".
+        var classified = list.Select(i => { var (cat, pr) = Classify(i); return i with { Category = cat, Priority = pr }; })
+            .OrderByDescending(i => i.Priority).ThenBy(i => i.Id, StringComparer.Ordinal).ToList();
+        return (snap.Revision, classified);
     }
 
     // Last 90 days of data vs the 90 days before, anchored on the newest record (robust to partial months).
@@ -44,8 +73,8 @@ public sealed class InsightsService(IExpenseStore store)
             var top = stats[0];
             list.Add(new Insight($"growth-{cur}", "growth", top.Pct > 15 ? "warning" : "info",
                 $"{top.Dep} lidera el crecimiento en {cur}",
-                $"Gasto de los últimos 90 días ({curFrom:yyyy-MM-dd} → {anchor:yyyy-MM-dd}): {N(top.Cur)} {cur} frente a {N(top.Prev)} {cur} en los 90 días previos ({top.Pct:+0.0;-0.0}%).",
-                new() { ["moneda"] = cur, ["ranking"] = stats.Select(s => new { departamento = s.Dep, actual = s.Cur, previo = s.Prev, cambioPct = Math.Round(s.Pct, 2) }).ToList() }));
+                T($"Gasto de los últimos 90 días ({curFrom:yyyy-MM-dd} → {anchor:yyyy-MM-dd}): {N(top.Cur)} {cur} frente a {N(top.Prev)} {cur} en los 90 días previos ({top.Pct:+0.0;-0.0} %)."),
+                new() { ["moneda"] = cur, ["dimension"] = "departamento", ["desde"] = curFrom.ToString("yyyy-MM-dd"), ["hasta"] = anchor.ToString("yyyy-MM-dd"), ["ranking"] = stats.Select(s => new { departamento = s.Dep, actual = s.Cur, previo = s.Prev, cambioPct = Math.Round(s.Pct, 2) }).ToList() }));
         }
     }
 
@@ -61,8 +90,8 @@ public sealed class InsightsService(IExpenseStore store)
             var pct = (double)((a - b) / b * 100m);
             list.Add(new Insight($"mom-{cur}", "period-change", Math.Abs(pct) > 20 ? "warning" : "info",
                 $"{cur}: {m1:yyyy-MM} vs {m2:yyyy-MM}",
-                $"Total {N(a)} {cur} en {m1:yyyy-MM} frente a {N(b)} {cur} en {m2:yyyy-MM} ({pct:+0.0;-0.0}%).",
-                new() { ["moneda"] = cur, ["mesActual"] = m1.ToString("yyyy-MM"), ["mesPrevio"] = m2.ToString("yyyy-MM"), ["total"] = a, ["totalPrevio"] = b, ["cambioPct"] = Math.Round(pct, 2) }));
+                T($"Total {N(a)} {cur} en {m1:yyyy-MM} frente a {N(b)} {cur} en {m2:yyyy-MM} ({pct:+0.0;-0.0} %)."),
+                new() { ["moneda"] = cur, ["desde"] = m1.ToString("yyyy-MM-dd"), ["hasta"] = m1.AddMonths(1).AddDays(-1).ToString("yyyy-MM-dd"), ["mesActual"] = m1.ToString("yyyy-MM"), ["mesPrevio"] = m2.ToString("yyyy-MM"), ["total"] = a, ["totalPrevio"] = b, ["cambioPct"] = Math.Round(pct, 2) }));
         }
     }
 
@@ -79,8 +108,8 @@ public sealed class InsightsService(IExpenseStore store)
                 var hhi = Math.Round(shares.Sum(x => x.S * x.S) * 10000);
                 list.Add(new Insight($"conc-{label}-{cur}", "concentration", shares[0].S > 0.25 ? "warning" : "info",
                     $"Concentración por {label} ({cur})",
-                    $"{shares[0].K} concentra {shares[0].S:P1} del gasto en {cur}. Índice HHI = {hhi:N0} (≈{10000.0 / shares.Count:N0} sería un reparto perfectamente uniforme).",
-                    new() { ["moneda"] = cur, ["hhi"] = hhi, ["shares"] = shares.Select(s => new { clave = s.K, porcentaje = Math.Round(s.S * 100, 2) }).ToList() }));
+                    T($"{shares[0].K} concentra {shares[0].S:P1} del gasto en {cur}. Índice HHI = {hhi:N0} (≈{10000.0 / shares.Count:N0} sería un reparto perfectamente uniforme)."),
+                    new() { ["moneda"] = cur, ["dimension"] = label, ["hhi"] = hhi, ["shares"] = shares.Select(s => new { clave = s.K, porcentaje = Math.Round(s.S * 100, 2) }).ToList() }));
             }
         }
     }
@@ -101,7 +130,7 @@ public sealed class InsightsService(IExpenseStore store)
             ? new Insight("outliers", "outlier", "info", "Sin montos atípicos",
                 "Ningún gasto se desvía más de 3 desviaciones estándar de la media de su categoría y moneda.", new() { ["count"] = 0 })
             : new Insight("outliers", "outlier", "warning", $"{found.Count} montos atípicos",
-                $"Gastos a más de 3σ de la media de su categoría/moneda. El más extremo: #{found[0].E.Id} ({N(found[0].E.Monto)} {found[0].E.Moneda}, z={found[0].Z:0.0}).",
+                T($"Gastos a más de 3σ de la media de su categoría/moneda. El más extremo: #{found[0].E.Id} ({N(found[0].E.Monto)} {found[0].E.Moneda}, z={found[0].Z:0.0})."),
                 new() { ["count"] = found.Count, ["recordIds"] = found.Take(25).Select(x => x.E.Id).ToList() }));
     }
 
@@ -141,7 +170,7 @@ public sealed class InsightsService(IExpenseStore store)
             var old = rows.Where(r => r.Moneda == cur && r.Estado == ExpenseStates.Pending && r.Fecha < cutoff).ToList();
             if (old.Count == 0) continue;
             list.Add(new Insight($"backlog-{cur}", "backlog", "warning", $"Pendientes con más de 60 días ({cur})",
-                $"{old.Count} gastos sin aprobar anteriores a {cutoff:yyyy-MM-dd} suman {N(old.Sum(r => r.Monto))} {cur}.",
+                T($"{old.Count} gastos sin aprobar anteriores a {cutoff:yyyy-MM-dd} suman {N(old.Sum(r => r.Monto))} {cur}."),
                 new() { ["moneda"] = cur, ["hasta"] = cutoff.AddDays(-1).ToString("yyyy-MM-dd"), ["count"] = old.Count, ["total"] = old.Sum(r => r.Monto), ["oldestIds"] = old.OrderBy(r => r.Fecha).Take(10).Select(r => r.Id).ToList() }));
         }
     }

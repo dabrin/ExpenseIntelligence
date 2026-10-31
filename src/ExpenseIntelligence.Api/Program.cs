@@ -188,7 +188,7 @@ api.MapGet("/insights", ([AsParameters] ExpenseQueryParams p, InsightsService i)
     return new { revision = rev, insights = list };
 }).WithTags("Analytics");
 api.MapPost("/assistant/query", async (AssistantRequest r, LlmAssistant a, CancellationToken ct) =>
-    string.IsNullOrWhiteSpace(r.Question) ? Results.BadRequest(new { title = "La pregunta es obligatoria." }) : Results.Ok(await a.AskAsync(r.Question, r.History, r.LastIntent, r.LastQuestion, ct)))
+    string.IsNullOrWhiteSpace(r.Question) ? Results.BadRequest(new { title = "La pregunta es obligatoria." }) : Results.Ok(await a.AskAsync(r.Question, r.History, r.LastIntent, r.LastQuestion, ct, r.Page)))
     .WithTags("Assistant");
 api.MapGet("/assistant/status", (LlmAssistant a) => new { llm = a.Enabled, model = a.Enabled ? a.Model : null }).WithTags("Assistant");
 api.MapGet("/assistant/examples", () => AssistantService.Examples).WithTags("Assistant");
@@ -279,7 +279,7 @@ app.MapFallbackToFile("index.html");
 
 app.Run();
 
-public sealed record AssistantRequest(string? Question, string? LastIntent, string? LastQuestion, List<ChatTurn>? History = null);
+public sealed record AssistantRequest(string? Question, string? LastIntent, string? LastQuestion, List<ChatTurn>? History = null, string? Page = null);
 public sealed record ImportCommit(string? Token, bool? Replace, string? Mode = null, string? DatasetId = null);
 public sealed record DatasetActivate(bool Reset);
 public sealed record FactoryReset(string? Confirm);

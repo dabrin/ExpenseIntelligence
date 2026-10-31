@@ -1,3 +1,4 @@
+import { MascotComponent } from '../../shared/mascot.component';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
@@ -13,9 +14,10 @@ const GROUPS: { key: string; label: string }[] = [
 ];
 
 @Component({
-  selector: 'app-history', standalone: true, imports: [IconComponent, DatePipe], changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-history', standalone: true, imports: [IconComponent, DatePipe, MascotComponent], changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="head rise">
+    <header class="head rise ttl">
+      <app-mascot pose="tiempo" [height]="84" />
       <div><h1>Historial de cambios</h1>
         <p class="muted">Todo lo que se hizo en el sistema: ediciones, eliminaciones, restauraciones, creaciones de gastos, cambios de estado y cargas de archivos. Los últimos 500 eventos.</p></div>
     </header>

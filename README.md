@@ -26,14 +26,14 @@ cd .. && dotnet run --project src/ExpenseIntelligence.Api
 
 - App: http://localhost:5080 · Swagger: http://localhost:5080/swagger
 - Desarrollo con recarga: `dotnet run --project src/ExpenseIntelligence.Api` + `cd web && npx ng serve` (proxy `/api` → 5080, http://localhost:4200)
-- Pruebas: `dotnet test` (130 pruebas)
+- Pruebas: `dotnet test` (137 pruebas)
 - Guía de uso paso a paso: [`docs/TUTORIAL.md`](docs/TUTORIAL.md)
 
 ## Qué incluye
 
 | Área | Detalle |
 |---|---|
-| **Dashboard** | KPIs por moneda (nunca se suman monedas), % aprobado/pendiente, evolución temporal (mensual/semanal), promedio y total por departamento, top categorías, métodos de pago. Filtros combinables: fechas, departamentos y categorías múltiples, moneda, método de pago, estado. |
+| **Dashboard** | KPIs por moneda (nunca se suman monedas), % aprobado/pendiente, evolución temporal (mensual/semanal), promedio y total por departamento, top categorías, métodos de pago. Filtros combinables: fechas, departamentos y categorías múltiples, moneda, método de pago, estado. **Gráficos clicables**: una barra, segmento o periodo abre Gastos con ese filtro (más moneda) sobre los filtros compartidos, con una tabla alternativa por teclado. Evolución en líneas o barras apiladas, con los rechazados aparte y los periodos incompletos marcados. Secciones mostrables u ocultables (se recuerda en el navegador). |
 | **Estados y edición** | Solo los gastos **pendientes** se pueden editar. Aprobar, rechazar (con motivo) y volver a pendiente se hace desde el panel de detalle (`POST /api/expenses/{id}/state`, con control de versión); cada cambio queda en el audit y el Historial. La regla se valida en el servidor dentro del lock de escritura, así que ni una petición directa a la API la salta. |
 | **Archivos (A/B)** | Cada archivo cargado queda registrado con su original intacto (solo lectura) y sus propios cambios (`/archivos`). Cambiar de archivo guarda el estado del actual y carga el otro: **las ediciones de cada archivo persisten**. Se puede volver un archivo a su original (descarta sus cambios), eliminar los inactivos o **dejar el sistema limpio** (vuelve al original del sistema y borra archivos cargados, cambios, papelera, historial y respaldos; exige escribir `LIMPIAR`). |
 | **Archivo repetido / versiones** | Al subir, se compara el contenido (SHA-256): si ya existe se ofrece volver a él (conserva sus cambios) o reiniciarlo; si hay otro con el mismo nombre pero contenido distinto se avisa que es una versión nueva. |
@@ -46,8 +46,8 @@ cd .. && dotnet run --project src/ExpenseIntelligence.Api
 | **Importar archivo** | Sube un JSON desde la UI (`/importar`). Primero se **analiza sin modificar nada** (lectura tolerante, reparaciones, cuarentena, calidad de datos, comparación de registros). Al confirmar puedes **ignorar los datos anteriores** (reemplazar, atómico y auditado) o **conservar y agregar** (IDs ya existentes se omiten sin sobrescribir); el archivo subido se guarda intacto (solo lectura) en `data/working/imports/` como nuevo original. Dashboard, Data Doctor, insights y Diagnóstico salen de ese archivo. |
 | **Gastos (CRUD)** | Tabla con paginación, orden y búsqueda **en servidor**; detalle; alta/edición con validación en frontend y backend; control de concurrencia optimista (409); eliminación lógica con confirmación y *Deshacer*; auditoría. |
 | **Data Doctor** *(diferenciador A)* | Anomalías por severidad con causa, recomendación y registros afectados; correcciones seguras y auditadas (espacios, variantes de catálogo). Muestra el *diff* de la reparación de ingesta. |
-| **Smart Insights** *(B)* | Crecimiento por departamento (90 d vs 90 d), cambio mensual, concentración (HHI), atípicos (>3σ), posibles duplicados, pendientes antiguos. Todo determinista; cada tarjeta muestra los números. |
-| **Asistente** *(C, opcional)* | Dos modos. **Reglas** (por defecto): intenciones que llaman las mismas consultas de lectura. **IA** (si se define `OPENAI_API_KEY`): Prestamito (la mascota): un modelo de OpenAI que solo puede usar 5 herramientas de lectura sobre los datos, puede mostrar gráficos y tablas (el modelo elige qué mostrar y el servidor calcula cada cifra), rechaza lo ajeno a los gastos y cae al modo de reglas si falla o se agota el presupuesto. En ambos modos no inventa cifras ni puede escribir. La UI indica cuál está activo. |
+| **Smart Insights** *(B)* | Crecimiento por departamento (90 d vs 90 d), cambio mensual, concentración (HHI), atípicos (>3σ), posibles duplicados, pendientes antiguos. Todo determinista; cada tarjeta muestra los números. El servidor los clasifica (alertas, tendencias, distribución) y ordena por relevancia; el dashboard muestra 5 con pestañas y «Ver todos». |
+| **Asistente** *(C, opcional)* | Dos modos. **Reglas** (por defecto): intenciones que llaman las mismas consultas de lectura. **IA** (si se define `OPENAI_API_KEY`): Prestamito (la mascota): un modelo de OpenAI que solo puede usar 6 herramientas de lectura sobre los datos, puede mostrar gráficos y tablas (el modelo elige qué mostrar y el servidor calcula cada cifra), **te guía por la aplicación** (explica cómo crear, exportar, importar… y con `open_page` te lleva a una pantalla con los filtros ya aplicados, solo a rutas propias), vive en un **chat flotante** disponible en todas las pantallas cuya conversación se conserva al navegar y al recargar, rechaza lo ajeno a los gastos y cae al modo de reglas si falla o se agota el presupuesto. En ambos modos no inventa cifras ni puede escribir. La UI indica cuál está activo. |
 | **Diagnóstico** *(D)* | Estado de almacenamiento, última persistencia, tiempos p50/p95 medidos en servidor, GC, verificación de integridad (memoria vs disco vs hash del original), benchmark de solo lectura, auditoría. |
 
 Obligatorio = Dashboard + Gastos + persistencia. Opcional/diferenciador = Data Doctor, Insights, Asistente, Diagnóstico.
@@ -72,7 +72,7 @@ src/
   ExpenseIntelligence.Infrastructure  JsonExpenseStore (repositorio), RecoveryReader (ingesta tolerante), escritor streaming
   ExpenseIntelligence.Api             Minimal API, ProblemDetails, métricas de latencia, logging JSON, Swagger, hosting del SPA
 web/                                  Angular 17 standalone + signals, rutas lazy, Chart.js
-tests/ExpenseIntelligence.Tests       xUnit + WebApplicationFactory (130 pruebas)
+tests/ExpenseIntelligence.Tests       xUnit + WebApplicationFactory (137 pruebas)
 data/original/                        Original intacto (solo lectura, SHA-256 en SHA256.txt)
 data/working/                         (generado) expenses.json, .bak, ingest-report.json, quarantine.json, audit.jsonl
 ```
@@ -101,7 +101,7 @@ Dependencias en un solo sentido (Api → Infrastructure → Application → Doma
 
 ## Evidencia de verificación
 
-`dotnet test` → **130 pasadas, 0 fallidas**, incluyendo: validaciones, IDs duplicados, JSON corrupto/truncado/BOM, CRUD completo (servicio y HTTP), cada filtro y todos combinados, agregaciones verificadas a mano, paginación y orden, 100 creaciones concurrentes (IDs únicos y todas en el archivo), 40 actualizaciones concurrentes del mismo registro (exactamente 1 ganador), fallo de disco simulado (memoria intacta y recuperación posterior), `.tmp` huérfano, archivo dañado → `.bak`, segunda instancia rechazada, persistencia tras reinicio y lectura consistente durante escrituras. Las pruebas usan directorios temporales aislados: nunca tocan `data/`.
+`dotnet test` → **137 pasadas, 0 fallidas**, incluyendo: validaciones, IDs duplicados, JSON corrupto/truncado/BOM, CRUD completo (servicio y HTTP), cada filtro y todos combinados, agregaciones verificadas a mano, paginación y orden, 100 creaciones concurrentes (IDs únicos y todas en el archivo), 40 actualizaciones concurrentes del mismo registro (exactamente 1 ganador), fallo de disco simulado (memoria intacta y recuperación posterior), `.tmp` huérfano, archivo dañado → `.bak`, segunda instancia rechazada, persistencia tras reinicio y lectura consistente durante escrituras. Las pruebas usan directorios temporales aislados: nunca tocan `data/`.
 
 Mediciones reales sobre el dataset de 10 000 registros (máquina de desarrollo, Apple Silicon, .NET 8.0.133; salida de `PerformanceTests`):
 

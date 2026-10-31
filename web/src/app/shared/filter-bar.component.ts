@@ -47,9 +47,10 @@ import { MultiSelectComponent } from './multi-select.component';
       }
     </section>`,
   styles: [`
-    .bar { display: grid; gap: 12px; padding: 14px 16px; }
+    .bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 14px 16px; }
+    .top .seg { max-width: 100%; overflow-x: auto; }
     .ttl { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; }
-    .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
+    .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 10px; align-items: end; }
     .presets { font-size: 12.5px; } .hint { display: inline-flex; gap: 5px; align-items: center; font-size: 12px; color: var(--faint); cursor: help; }
     .banner.sm { padding: 7px 12px; align-items: center; font-size: 13px; }
     .search { position: relative; display: block; width: min(320px, 100%); app-icon { position: absolute; left: 11px; top: 10px; color: var(--faint); } input { padding-left: 33px; } }

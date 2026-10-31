@@ -19,13 +19,17 @@ export interface Paged<T> { items: T[]; total: number; page: number; pageSize: n
 
 export interface CurrencyTotal { moneda: string; total: number; count: number; average: number; max: number; approvedTotal: number; pendingTotal: number }
 export interface DimensionStat { key: string; moneda: string; count: number; total: number; average: number }
-export interface TimePoint { period: string; moneda: string; count: number; total: number; approvedTotal: number; pendingTotal: number }
+export interface TimePoint {
+  period: string; moneda: string; count: number; total: number; approvedTotal: number; pendingTotal: number;
+  approvedCount: number; pendingCount: number; rejectedCount: number; rejectedTotal: number; start: string; end: string; partial: boolean;
+}
 export interface ApprovalStat { approved: number; pending: number; rejected: number; approvedPct: number; pendingPct: number; rejectedPct: number; byCurrency: { moneda: string; approved: number; pending: number; approvedTotal: number; pendingTotal: number }[] }
 export interface Summary {
   revision: number; totalRecords: number; totals: CurrencyTotal[]; byDepartment: DimensionStat[]; byCategory: DimensionStat[];
   byPaymentMethod: DimensionStat[]; series: TimePoint[]; granularity: string; approval: ApprovalStat;
 }
-export interface Insight { id: string; type: string; severity: 'info' | 'warning'; title: string; detail: string; data: Record<string, unknown> }
+export type InsightCategory = 'alertas' | 'tendencias' | 'distribucion';
+export interface Insight { id: string; type: string; severity: 'info' | 'warning'; title: string; detail: string; data: Record<string, unknown>; category: InsightCategory; priority: number }
 
 export interface LoadReport {
   source: string; strategy: string; bytes: number; sha256: string; truncated: boolean; objectsFound: number; loaded: number; repaired: number;
@@ -52,7 +56,9 @@ export interface ChatTurn { role: 'user' | 'assistant'; content: string }
 export interface AssistantStatus { llm: boolean; model: string | null }
 export interface VisualSeries { name: string; values: number[] }
 export interface AssistantVisual { kind: 'bar' | 'line' | 'pie' | 'table'; title: string; labels: string[]; series: VisualSeries[]; currency: string | null; columns: string[]; rows: string[][] }
-export interface AssistantAnswer { mode: string; intent: string; answer: string; columns: string[]; rows: string[][]; period: string; source: string; suggestions: string[]; scope: string[]; visuals?: AssistantVisual[] | null }
+export interface AssistantFilters { from: string | null; to: string | null; departamentos: string[] | null; categorias: string[] | null; monedas: string[] | null; metodosPago: string[] | null; estado: string | null; search: string | null }
+export interface AssistantAction { type: 'navigate'; label: string; path: string; filters: AssistantFilters | null; auto: boolean }
+export interface AssistantAnswer { mode: string; intent: string; answer: string; columns: string[]; rows: string[][]; period: string; source: string; suggestions: string[]; scope: string[]; visuals?: AssistantVisual[] | null; actions?: AssistantAction[] | null }
 
 export interface ApiProblem { status: number; title: string; errors?: Record<string, string[]>; currentVersion?: number; conflicts?: BulkConflict[]; conflictCount?: number }
 

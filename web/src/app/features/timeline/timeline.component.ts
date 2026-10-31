@@ -6,6 +6,7 @@ import { Timeline } from '../../core/models';
 import { DataVersion, FilterStore, fmt } from '../../core/state';
 import { FilterBarComponent } from '../../shared/filter-bar.component';
 import { IconComponent } from '../../shared/icon.component';
+import { MascotComponent } from '../../shared/mascot.component';
 import { RaceBarsComponent, RaceItem } from '../../shared/race-bars.component';
 
 type Mode = 'acum' | 'mes';
@@ -21,9 +22,10 @@ function label(period: string) {
 }
 
 @Component({
-  selector: 'app-timeline', standalone: true, imports: [FilterBarComponent, IconComponent, RaceBarsComponent], changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-timeline', standalone: true, imports: [FilterBarComponent, IconComponent, MascotComponent, RaceBarsComponent], changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="head rise">
+    <header class="head rise th">
+      <app-mascot pose="tiempo" [height]="96" />
       <div>
         <h1>Máquina del tiempo</h1>
         <p class="muted">Reproduce el gasto mes a mes y mira cómo cambia el ranking de departamentos y categorías. Son los datos reales del archivo; las monedas nunca se suman entre sí.</p>
@@ -94,6 +96,7 @@ function label(period: string) {
   styles: [`
     :host { display: block; }
     .head { margin-bottom: 18px; h1 { margin: 0 0 4px; } p { margin: 0; } }
+    .head.th { display: flex; align-items: center; gap: 16px; }
     .stage { margin-top: 16px; display: grid; gap: 16px; }
     .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
     .play { min-width: 138px; justify-content: center; }

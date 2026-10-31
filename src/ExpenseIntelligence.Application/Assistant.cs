@@ -8,7 +8,11 @@ public sealed record VisualSeries(string Name, double[] Values);
 /// <summary>A chart or table the assistant decided to show. Every number is computed by the server from the live data, never written by the model.</summary>
 public sealed record AssistantVisual(string Kind, string Title, string[] Labels, VisualSeries[] Series, string? Currency, string[] Columns, List<string[]> Rows);
 
-public sealed record AssistantAnswer(string Mode, string Intent, string Answer, string[] Columns, List<string[]> Rows, string Period, string Source, string[] Suggestions, string[] Scope, AssistantVisual[]? Visuals = null);
+/// <summary>Filters the assistant asks the UI to apply (the same shared filters as the filter bar). Only the screens that use them accept them.</summary>
+public sealed record AssistantFilters(string? From, string? To, string[]? Departamentos, string[]? Categorias, string[]? Monedas, string[]? MetodosPago, string? Estado, string? Search);
+/// <summary>A navigation the assistant offers ("Abrir Gastos"). Auto = the user explicitly asked to go there, so the UI opens it right away. Path is always one of the app's own routes.</summary>
+public sealed record AssistantAction(string Type, string Label, string Path, AssistantFilters? Filters, bool Auto);
+public sealed record AssistantAnswer(string Mode, string Intent, string Answer, string[] Columns, List<string[]> Rows, string Period, string Source, string[] Suggestions, string[] Scope, AssistantVisual[]? Visuals = null, AssistantAction[]? Actions = null);
 
 /// <summary>
 /// Conversational assistant WITHOUT an LLM. It understands intents plus entities (department, category, currency, payment method, period),

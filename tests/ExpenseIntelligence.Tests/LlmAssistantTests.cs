@@ -200,4 +200,35 @@ public class LlmAssistantTests
         for (var i = 0; i < 30; i++) Assert.Equal("llm", (await a.AskAsync("¿Qué departamentos hay?", null, null, null)).Mode);
         Assert.Equal("rules", (await a.AskAsync("¿Cuál es el total gastado por moneda?", null, null, null)).Mode);
     }
+
+    [Fact]
+    public async Task Opening_a_screen_returns_a_whitelisted_route_with_filters_and_the_real_match_count()
+    {
+        using var sb = new Sandbox();
+        var fake = new Fake((HttpStatusCode.OK, ToolCall("open_page", """{"page":"gastos","estado":"pendiente","monedas":["USD"],"open_now":true}""")), (HttpStatusCode.OK, Text("Te llevo a Gastos.")));
+        var a = Build(sb, "k", fake, out var st); using var _ = st;
+        var r = await a.AskAsync("llévame a los gastos pendientes en USD", null, null, null, default, "/dashboard");
+        var act = Assert.Single(r.Actions!);
+        Assert.Equal(("/gastos", true), (act.Path, act.Auto));
+        Assert.Equal("pendiente", act.Filters!.Estado);
+        Assert.Equal(["USD"], act.Filters.Monedas);
+        Assert.Contains("coinciden", fake.Requests[1]);                       // the model is told how many expenses match, from the server
+        Assert.Contains("la pantalla Dashboard", fake.Requests[0]);    // and where the user is now
+    }
+
+    [Fact]
+    public async Task Unknown_screens_are_refused_and_screens_without_filters_drop_them()
+    {
+        using var sb = new Sandbox();
+        var fake = new Fake((HttpStatusCode.OK, ToolCall("open_page", """{"page":"https://evil.example"}""")), (HttpStatusCode.OK, Text("No encontré esa pantalla.")),
+            (HttpStatusCode.OK, ToolCall("open_page", """{"page":"archivos","estado":"pendiente"}""")), (HttpStatusCode.OK, Text("Aquí está.")));
+        var a = Build(sb, "k", fake, out var st); using var _ = st;
+        Assert.Null((await a.AskAsync("abre evil", null, null, null)).Actions);
+        Assert.Contains("Pantalla desconocida", fake.Requests[1]);
+        var r = await a.AskAsync("ve a archivos", null, null, null);
+        var act = Assert.Single(r.Actions!);
+        Assert.Equal("/archivos", act.Path);
+        Assert.Null(act.Filters);                                              // Archivos does not read the shared filters
+        Assert.False(act.Auto);                                                // not explicitly requested: offered, not forced
+    }
 }

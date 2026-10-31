@@ -54,7 +54,7 @@ export class ApiService {
   benchmark() { return this.http.post<Benchmark>('/api/diagnostics/benchmark', {}); }
   history(take = 150, tipo = 'all') { return this.http.get<HistoryItem[]>('/api/history', { params: { take, tipo } }); }
   audit(take = 30) { return this.http.get<AuditEntry[]>('/api/audit', { params: { take } }); }
-  ask(question: string, lastIntent?: string, lastQuestion?: string, history?: ChatTurn[]) { return this.http.post<AssistantAnswer>('/api/assistant/query', { question, lastIntent, lastQuestion, history }); }
+  ask(question: string, lastIntent?: string, lastQuestion?: string, history?: ChatTurn[], page?: string) { return this.http.post<AssistantAnswer>('/api/assistant/query', { question, lastIntent, lastQuestion, history, page }); }
   assistantStatus() { return this.http.get<AssistantStatus>('/api/assistant/status'); }
   importPreview(file: File) { const f = new FormData(); f.append('file', file, file.name); return this.http.post<ImportPreview>('/api/import/preview', f); }
   importCommit(token: string, mode: 'new' | 'merge' | 'switch' | 'reset', datasetId?: string) { return this.http.post<ImportResult>('/api/import/commit', { token, mode, datasetId }, this.actor); }

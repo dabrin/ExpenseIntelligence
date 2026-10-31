@@ -48,6 +48,11 @@ export class DataVersion {
   bump() { this.n.update(v => v + 1); }
 }
 
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const PCT = new Intl.NumberFormat('es-CR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const iso = (s: string) => { const [y, m, d] = s.split('-').map(Number); return { y, m, d }; };
+
+/** The single place where numbers, money, percentages and dates are formatted (es-CR). Money is always shown with its own currency; currencies are never combined. */
 export const fmt = {
   /** Never throws: imported files can carry currency codes Intl rejects (e.g. "???"); those are shown as plain "CODE amount". */
   money(v: number, cur: string, compact = false) {
@@ -59,5 +64,17 @@ export const fmt = {
     }
   },
   num(v: number) { return new Intl.NumberFormat('es-CR').format(v); },
-  pct(v: number) { return `${v.toFixed(1)}%`; },
+  /** Percentages always carry one decimal and Spanish separators: "62,5 %". */
+  pct(v: number) { return `${PCT.format(v)} %`; },
+  /** "2026-03" -> "mar 2026"; week/day "2026-03-02" -> "2 mar 2026". */
+  period(p: string, granularity: string) {
+    const { y, m, d } = iso(p);
+    return granularity === 'month' ? `${MONTHS[m - 1]} ${y}` : `${d} ${MONTHS[m - 1]} ${y}`;
+  },
+  /** Calendar range of a bucket for tooltips and tables: "mar 2026" for a month, "2 – 8 mar 2026" for a week. */
+  range(start: string, end: string, granularity: string) {
+    if (granularity === 'month') return fmt.period(start.slice(0, 7), 'month');
+    const a = iso(start), b = iso(end);
+    return a.m === b.m && a.y === b.y ? `${a.d} – ${b.d} ${MONTHS[b.m - 1]} ${b.y}` : `${a.d} ${MONTHS[a.m - 1]} – ${b.d} ${MONTHS[b.m - 1]} ${b.y}`;
+  },
 };

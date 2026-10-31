@@ -118,7 +118,7 @@ dl.kv { display: grid; grid-template-columns: 130px 1fr; gap: 9px 12px; margin: 
   @page { size: A4 landscape; margin: 12mm; }
   body, .shell, .main, main { background: #fff !important; }
   .shell { display: block !important; }
-  .side, .mobile-bar, .site-foot, .toasts, .skip, app-filter-bar, app-export-menu, .seg, .head .btn, .ins-grid a, .drawer, .backdrop { display: none !important; }
+  .side, .mobile-bar, .site-foot, .toasts, .skip, app-filter-bar, app-export-menu, app-assistant-widget, .seg, .head .btn, .ins-grid a, .drawer, .backdrop { display: none !important; }
   .print-only { display: block !important; margin: 0 0 10px; h2 { margin: 0; font-size: 16px; } p { margin: 2px 0 0; font-size: 11px; color: #555; } }
   .card, article { break-inside: avoid; box-shadow: none !important; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; animation: none !important; }
@@ -126,3 +126,4 @@ dl.kv { display: grid; grid-template-columns: 130px 1fr; gap: 9px 12px; margin: 
 
 /* page headers hold dropdowns (export menu): keep them above the content that follows */
 .head { position: relative; z-index: 20; }
+.ttl { display: flex; align-items: center; gap: 14px; }

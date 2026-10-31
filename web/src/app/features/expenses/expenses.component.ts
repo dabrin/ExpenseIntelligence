@@ -9,15 +9,16 @@ import { DataVersion, FilterStore, ToastService, fmt } from '../../core/state';
 import { FilterBarComponent } from '../../shared/filter-bar.component';
 import { ExportMenuComponent } from '../../shared/export-menu.component';
 import { IconComponent } from '../../shared/icon.component';
+import { MascotComponent } from '../../shared/mascot.component';
 import { BulkDialogComponent } from './bulk-dialog.component';
 import { ExpenseFormComponent } from './expense-form.component';
 
 @Component({
-  selector: 'app-expenses', standalone: true, imports: [FilterBarComponent, IconComponent, ExpenseFormComponent, BulkDialogComponent, ExportMenuComponent, DatePipe], changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-expenses', standalone: true, imports: [FilterBarComponent, IconComponent, ExpenseFormComponent, BulkDialogComponent, ExportMenuComponent, DatePipe, MascotComponent], changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
   <header class="head rise">
-    <div><h1>Gestión de gastos</h1>
-      <p class="muted">@if (data(); as d) { {{ fmt.num(d.total) }} resultados · página {{ d.page }} de {{ d.totalPages }} } @else { Cargando… }</p></div>
+    <div class="ttl"><app-mascot pose="revision" [height]="84" /><div><h1>Gestión de gastos</h1>
+      <p class="muted">@if (data(); as d) { {{ fmt.num(d.total) }} resultados · página {{ d.page }} de {{ d.totalPages }} } @else { Cargando… }</p></div></div>
     <div class="row">
       <div class="seg" role="group" aria-label="Vista">
         <button type="button" [class.on]="!trash()" (click)="trash.set(false)">Activos</button>
@@ -86,7 +87,7 @@ import { ExpenseFormComponent } from './expense-form.component';
       </tbody>
     </table>
     @if (!loading() && data() && data()!.items.length === 0) {
-      <div class="empty"><app-icon name="inbox" [size]="40" /><strong>{{ trash() ? 'La papelera está vacía' : 'No hay gastos con estos filtros' }}</strong><span>{{ trash() ? 'Los gastos que elimines aparecerán aquí para que puedas restaurarlos.' : 'Prueba con otro rango de fechas o restablece los filtros.' }}</span></div>
+      <div class="empty">@if (trash()) { <app-icon name="inbox" [size]="40" /> } @else { <app-mascot pose="revision" [height]="120" /> }<strong>{{ trash() ? 'La papelera está vacía' : 'No hay gastos con estos filtros' }}</strong><span>{{ trash() ? 'Los gastos que elimines aparecerán aquí para que puedas restaurarlos.' : 'Prueba con otro rango de fechas o restablece los filtros.' }}</span></div>
     }
   </div>
 

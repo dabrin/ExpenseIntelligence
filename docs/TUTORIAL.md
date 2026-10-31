@@ -147,4 +147,14 @@ En Railway:
 
 Railway inyecta `PORT`; el contenedor lo usa automáticamente. Comprobación de salud: `/api/health`.
 
-> La app no tiene autenticación: cualquiera con la URL puede editar, eliminar y ejecutar "Dejar el sistema limpio".
+### Proteger el despliegue
+
+Configura estas variables en Railway (Variables). La contraseña la defines tú ahí; nunca la subas al repositorio.
+
+| Variable | Efecto |
+|---|---|
+| `APP_PASSWORD` | Activa Basic Auth en toda la app (el navegador pide usuario y contraseña). `/api/health` queda abierto para el chequeo de Railway. |
+| `APP_USER` | Usuario (opcional, por defecto `evaluador`). |
+| `PUBLIC_DEMO=true` | Desactiva Swagger y bloquea «Dejar el sistema limpio» y la eliminación de archivos (responden 403). |
+
+Sin `APP_PASSWORD` la app queda abierta: cualquiera con la URL podría editar y borrar datos. Usa HTTPS (Railway lo da por defecto), porque Basic Auth envía las credenciales codificadas, no cifradas.

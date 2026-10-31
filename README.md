@@ -26,7 +26,7 @@ cd .. && dotnet run --project src/ExpenseIntelligence.Api
 
 - App: http://localhost:5080 · Swagger: http://localhost:5080/swagger
 - Desarrollo con recarga: `dotnet run --project src/ExpenseIntelligence.Api` + `cd web && npx ng serve` (proxy `/api` → 5080, http://localhost:4200)
-- Pruebas: `dotnet test` (111 pruebas)
+- Pruebas: `dotnet test` (114 pruebas)
 - Guía de uso paso a paso: [`docs/TUTORIAL.md`](docs/TUTORIAL.md)
 
 ## Qué incluye
@@ -72,7 +72,7 @@ src/
   ExpenseIntelligence.Infrastructure  JsonExpenseStore (repositorio), RecoveryReader (ingesta tolerante), escritor streaming
   ExpenseIntelligence.Api             Minimal API, ProblemDetails, métricas de latencia, logging JSON, Swagger, hosting del SPA
 web/                                  Angular 17 standalone + signals, rutas lazy, Chart.js
-tests/ExpenseIntelligence.Tests       xUnit + WebApplicationFactory (111 pruebas)
+tests/ExpenseIntelligence.Tests       xUnit + WebApplicationFactory (114 pruebas)
 data/original/                        Original intacto (solo lectura, SHA-256 en SHA256.txt)
 data/working/                         (generado) expenses.json, .bak, ingest-report.json, quarantine.json, audit.jsonl
 ```
@@ -101,7 +101,7 @@ Dependencias en un solo sentido (Api → Infrastructure → Application → Doma
 
 ## Evidencia de verificación
 
-`dotnet test` → **111 pasadas, 0 fallidas**, incluyendo: validaciones, IDs duplicados, JSON corrupto/truncado/BOM, CRUD completo (servicio y HTTP), cada filtro y todos combinados, agregaciones verificadas a mano, paginación y orden, 100 creaciones concurrentes (IDs únicos y todas en el archivo), 40 actualizaciones concurrentes del mismo registro (exactamente 1 ganador), fallo de disco simulado (memoria intacta y recuperación posterior), `.tmp` huérfano, archivo dañado → `.bak`, segunda instancia rechazada, persistencia tras reinicio y lectura consistente durante escrituras. Las pruebas usan directorios temporales aislados: nunca tocan `data/`.
+`dotnet test` → **114 pasadas, 0 fallidas**, incluyendo: validaciones, IDs duplicados, JSON corrupto/truncado/BOM, CRUD completo (servicio y HTTP), cada filtro y todos combinados, agregaciones verificadas a mano, paginación y orden, 100 creaciones concurrentes (IDs únicos y todas en el archivo), 40 actualizaciones concurrentes del mismo registro (exactamente 1 ganador), fallo de disco simulado (memoria intacta y recuperación posterior), `.tmp` huérfano, archivo dañado → `.bak`, segunda instancia rechazada, persistencia tras reinicio y lectura consistente durante escrituras. Las pruebas usan directorios temporales aislados: nunca tocan `data/`.
 
 Mediciones reales sobre el dataset de 10 000 registros (máquina de desarrollo, Apple Silicon, .NET 8.0.133; salida de `PerformanceTests`):
 

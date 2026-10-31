@@ -79,8 +79,54 @@ app.Use(async (ctx, next) =>
     }
 });
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Optional protection for public deployments. APP_PASSWORD enables HTTP Basic auth (user: APP_USER, default "evaluador");
+// PUBLIC_DEMO=true additionally disables Swagger and the destructive dataset endpoints. /api/health stays open for the platform probe.
+var appPassword = builder.Configuration["APP_PASSWORD"];
+var appUser = builder.Configuration["APP_USER"] is { Length: > 0 } u ? u : "evaluador";
+var publicDemo = bool.TryParse(builder.Configuration["PUBLIC_DEMO"], out var pd) && pd;
+
+if (!string.IsNullOrEmpty(appPassword))
+{
+    var expected = System.Text.Encoding.UTF8.GetBytes($"{appUser}:{appPassword}");
+    app.Use(async (ctx, next) =>
+    {
+        if (ctx.Request.Path.Equals("/api/health", StringComparison.OrdinalIgnoreCase)) { await next(); return; }
+        var header = ctx.Request.Headers.Authorization.ToString();
+        if (header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var given = Convert.FromBase64String(header[6..].Trim());
+                if (System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(given, expected)) { await next(); return; }
+            }
+            catch (FormatException) { }
+        }
+        ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        ctx.Response.Headers.WWWAuthenticate = "Basic realm=\"Insta Expenses\", charset=\"UTF-8\"";
+    });
+}
+
+if (publicDemo)
+{
+    app.Use(async (ctx, next) =>
+    {
+        var path = ctx.Request.Path;
+        var destructive = path.StartsWithSegments("/api/datasets/factory-reset")
+            || (HttpMethods.IsDelete(ctx.Request.Method) && path.StartsWithSegments("/api/datasets"));
+        if (destructive)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await ctx.Response.WriteAsJsonAsync(new { title = "Acción deshabilitada en el modo demo público.", status = 403 });
+            return;
+        }
+        await next();
+    });
+}
+else
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 app.UseDefaultFiles();
 app.UseStaticFiles();
 

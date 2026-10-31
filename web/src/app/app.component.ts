@@ -33,6 +33,16 @@ import { IconComponent } from './shared/icon.component';
           <strong>Insta <span style="color:var(--accent)">Expenses</span></strong>
         </header>
         <main id="main" tabindex="-1"><router-outlet /></main>
+        <footer class="site-foot">
+          <div class="ft-text">
+            <strong>Desarrollado por Dabrin Nájera</strong>
+            <span>Prueba técnica creada para demostrar conocimientos en desarrollo de software asistido por IA.</span>
+          </div>
+          <div class="ft-links">
+            <a class="btn sm" routerLink="/dashboard"><app-icon name="dashboard" [size]="14" /> Ir al Dashboard</a>
+            <a class="btn sm ghost" href="https://github.com/dabrin/ExpenseIntelligence" target="_blank" rel="noopener noreferrer">Repositorio</a>
+          </div>
+        </footer>
       </div>
     </div>
     <div class="toasts" aria-live="polite">
@@ -57,7 +67,10 @@ import { IconComponent } from './shared/icon.component';
     .foot .btn { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: #fff; &:hover:not(:disabled) { background: rgba(255,255,255,.16); border-color: #5bbd3f; } }
     .foot { margin-top: auto; }
     .main { min-width: 0; }
-    main { padding: 26px clamp(16px, 3vw, 36px) 60px; max-width: 1560px; margin: 0 auto; outline: none; }
+    main { padding: 26px clamp(16px, 3vw, 36px) 36px; max-width: 1560px; margin: 0 auto; outline: none; }
+    .site-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; max-width: 1560px; margin: 0 auto; padding: 18px clamp(16px, 3vw, 36px) 28px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+    .ft-text { display: grid; gap: 2px; strong { color: var(--text); font-weight: 600; } }
+    .ft-links { display: flex; gap: 8px; flex-wrap: wrap; }
     .mobile-bar { display: none; }
     .toasts { position: fixed; right: 16px; bottom: 16px; display: grid; gap: 8px; z-index: 80; width: min(420px, calc(100vw - 32px)); }
     .toast { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border-2); box-shadow: 0 16px 40px -12px rgba(0,0,0,.6); span { flex: 1; }

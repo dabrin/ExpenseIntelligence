@@ -5,6 +5,7 @@ using ExpenseIntelligence.Api;
 using ExpenseIntelligence.Application;
 using ExpenseIntelligence.Domain;
 using ExpenseIntelligence.Infrastructure;
+using ExpenseIntelligence.Infrastructure.Assistant;
 using ExpenseIntelligence.Infrastructure.Storage;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -186,9 +187,10 @@ api.MapGet("/insights", ([AsParameters] ExpenseQueryParams p, InsightsService i)
     var (rev, list) = i.Generate(p.ToFilter());
     return new { revision = rev, insights = list };
 }).WithTags("Analytics");
-api.MapPost("/assistant/query", (AssistantRequest r, AssistantService a) =>
-    string.IsNullOrWhiteSpace(r.Question) ? Results.BadRequest(new { title = "La pregunta es obligatoria." }) : Results.Ok(a.Ask(r.Question, r.LastIntent, r.LastQuestion)))
+api.MapPost("/assistant/query", async (AssistantRequest r, LlmAssistant a, CancellationToken ct) =>
+    string.IsNullOrWhiteSpace(r.Question) ? Results.BadRequest(new { title = "La pregunta es obligatoria." }) : Results.Ok(await a.AskAsync(r.Question, r.History, r.LastIntent, r.LastQuestion, ct)))
     .WithTags("Assistant");
+api.MapGet("/assistant/status", (LlmAssistant a) => new { llm = a.Enabled, model = a.Enabled ? a.Model : null }).WithTags("Assistant");
 api.MapGet("/assistant/examples", () => AssistantService.Examples).WithTags("Assistant");
 
 // ---------- data doctor ----------
@@ -277,7 +279,7 @@ app.MapFallbackToFile("index.html");
 
 app.Run();
 
-public sealed record AssistantRequest(string? Question, string? LastIntent, string? LastQuestion);
+public sealed record AssistantRequest(string? Question, string? LastIntent, string? LastQuestion, List<ChatTurn>? History = null);
 public sealed record ImportCommit(string? Token, bool? Replace, string? Mode = null, string? DatasetId = null);
 public sealed record DatasetActivate(bool Reset);
 public sealed record FactoryReset(string? Confirm);

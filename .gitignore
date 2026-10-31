@@ -7,3 +7,6 @@ src/ExpenseIntelligence.Api/wwwroot/
 data/working/
 *.user
 .DS_Store
+
+# local secrets (API keys): never commit
+.env.local

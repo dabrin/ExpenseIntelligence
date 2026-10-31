@@ -25,6 +25,11 @@ public static class ServiceCollectionExtensions
         s.AddSingleton<InsightsService>();
         s.AddSingleton<DataDoctorService>();
         s.AddSingleton<AssistantService>();
+        // Optional LLM assistant: enabled only when OPENAI_API_KEY is set (never stored in the repo); OPENAI_MODEL overrides the default model.
+        s.AddSingleton(new Assistant.LlmOptions(config["OPENAI_API_KEY"], config["OPENAI_MODEL"] is { Length: > 0 } m ? m : "gpt-4o-mini"));
+        s.AddSingleton(sp => new Assistant.LlmAssistant(sp.GetRequiredService<AssistantService>(), sp.GetRequiredService<ExpenseQueryService>(), sp.GetRequiredService<AnalyticsService>(),
+            sp.GetRequiredService<InsightsService>(), sp.GetRequiredService<IExpenseStore>(), sp.GetRequiredService<Assistant.LlmOptions>(),
+            new HttpClient { Timeout = TimeSpan.FromSeconds(25) }, sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Assistant.LlmAssistant>>()));
         return s;
     }
 }

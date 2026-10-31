@@ -26,7 +26,7 @@ cd .. && dotnet run --project src/ExpenseIntelligence.Api
 
 - App: http://localhost:5080 · Swagger: http://localhost:5080/swagger
 - Desarrollo con recarga: `dotnet run --project src/ExpenseIntelligence.Api` + `cd web && npx ng serve` (proxy `/api` → 5080, http://localhost:4200)
-- Pruebas: `dotnet test` (117 pruebas)
+- Pruebas: `dotnet test` (130 pruebas)
 - Guía de uso paso a paso: [`docs/TUTORIAL.md`](docs/TUTORIAL.md)
 
 ## Qué incluye
@@ -47,7 +47,7 @@ cd .. && dotnet run --project src/ExpenseIntelligence.Api
 | **Gastos (CRUD)** | Tabla con paginación, orden y búsqueda **en servidor**; detalle; alta/edición con validación en frontend y backend; control de concurrencia optimista (409); eliminación lógica con confirmación y *Deshacer*; auditoría. |
 | **Data Doctor** *(diferenciador A)* | Anomalías por severidad con causa, recomendación y registros afectados; correcciones seguras y auditadas (espacios, variantes de catálogo). Muestra el *diff* de la reparación de ingesta. |
 | **Smart Insights** *(B)* | Crecimiento por departamento (90 d vs 90 d), cambio mensual, concentración (HHI), atípicos (>3σ), posibles duplicados, pendientes antiguos. Todo determinista; cada tarjeta muestra los números. |
-| **Asistente** *(C, opcional)* | **No es un LLM**: intenciones por reglas que llaman las mismas consultas de lectura. No inventa cifras ni puede escribir. Etiquetado así en la UI. |
+| **Asistente** *(C, opcional)* | Dos modos. **Reglas** (por defecto): intenciones que llaman las mismas consultas de lectura. **IA** (si se define `OPENAI_API_KEY`): Prestamito (la mascota): un modelo de OpenAI que solo puede usar 5 herramientas de lectura sobre los datos, puede mostrar gráficos y tablas (el modelo elige qué mostrar y el servidor calcula cada cifra), rechaza lo ajeno a los gastos y cae al modo de reglas si falla o se agota el presupuesto. En ambos modos no inventa cifras ni puede escribir. La UI indica cuál está activo. |
 | **Diagnóstico** *(D)* | Estado de almacenamiento, última persistencia, tiempos p50/p95 medidos en servidor, GC, verificación de integridad (memoria vs disco vs hash del original), benchmark de solo lectura, auditoría. |
 
 Obligatorio = Dashboard + Gastos + persistencia. Opcional/diferenciador = Data Doctor, Insights, Asistente, Diagnóstico.
@@ -72,7 +72,7 @@ src/
   ExpenseIntelligence.Infrastructure  JsonExpenseStore (repositorio), RecoveryReader (ingesta tolerante), escritor streaming
   ExpenseIntelligence.Api             Minimal API, ProblemDetails, métricas de latencia, logging JSON, Swagger, hosting del SPA
 web/                                  Angular 17 standalone + signals, rutas lazy, Chart.js
-tests/ExpenseIntelligence.Tests       xUnit + WebApplicationFactory (117 pruebas)
+tests/ExpenseIntelligence.Tests       xUnit + WebApplicationFactory (130 pruebas)
 data/original/                        Original intacto (solo lectura, SHA-256 en SHA256.txt)
 data/working/                         (generado) expenses.json, .bak, ingest-report.json, quarantine.json, audit.jsonl
 ```
@@ -101,7 +101,7 @@ Dependencias en un solo sentido (Api → Infrastructure → Application → Doma
 
 ## Evidencia de verificación
 
-`dotnet test` → **117 pasadas, 0 fallidas**, incluyendo: validaciones, IDs duplicados, JSON corrupto/truncado/BOM, CRUD completo (servicio y HTTP), cada filtro y todos combinados, agregaciones verificadas a mano, paginación y orden, 100 creaciones concurrentes (IDs únicos y todas en el archivo), 40 actualizaciones concurrentes del mismo registro (exactamente 1 ganador), fallo de disco simulado (memoria intacta y recuperación posterior), `.tmp` huérfano, archivo dañado → `.bak`, segunda instancia rechazada, persistencia tras reinicio y lectura consistente durante escrituras. Las pruebas usan directorios temporales aislados: nunca tocan `data/`.
+`dotnet test` → **130 pasadas, 0 fallidas**, incluyendo: validaciones, IDs duplicados, JSON corrupto/truncado/BOM, CRUD completo (servicio y HTTP), cada filtro y todos combinados, agregaciones verificadas a mano, paginación y orden, 100 creaciones concurrentes (IDs únicos y todas en el archivo), 40 actualizaciones concurrentes del mismo registro (exactamente 1 ganador), fallo de disco simulado (memoria intacta y recuperación posterior), `.tmp` huérfano, archivo dañado → `.bak`, segunda instancia rechazada, persistencia tras reinicio y lectura consistente durante escrituras. Las pruebas usan directorios temporales aislados: nunca tocan `data/`.
 
 Mediciones reales sobre el dataset de 10 000 registros (máquina de desarrollo, Apple Silicon, .NET 8.0.133; salida de `PerformanceTests`):
 

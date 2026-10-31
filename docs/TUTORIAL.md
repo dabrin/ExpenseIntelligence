@@ -149,6 +149,22 @@ En Railway:
 
 Railway inyecta `PORT`; el contenedor lo usa automáticamente. Comprobación de salud: `/api/health`.
 
+### Asistente con IA (opcional)
+
+Por defecto el Asistente responde con reglas. Si defines una clave de OpenAI, usa un modelo de lenguaje, pero **solo con herramientas de solo lectura sobre los datos del sistema** (totales, rankings, búsqueda de gastos, hallazgos). El modelo no recibe el archivo completo, no inventa cifras y rechaza lo que no tenga que ver con los gastos. El asistente se presenta como Prestamito y puede dibujar gráficos de barras, línea y pastel, y tablas, cuando se lo pides (por ejemplo «gráfico del gasto por departamento en USD» o «tabla con los 5 gastos más grandes en CRC»): el modelo elige qué mostrar, pero los números los calcula el servidor. Si la clave falta, el servicio falla o se agota el presupuesto (30 consultas por 10 minutos), responde el modo de reglas.
+
+1. En https://platform.openai.com/api-keys elige **Create new secret key**, ponle un nombre (por ejemplo `insta-expenses`) y, si puedes, usa permisos restringidos (solo *Model capabilities*).
+2. En **Billing → Limits** fija un presupuesto mensual bajo (por ejemplo 5 USD).
+3. Copia la clave en ese momento (no se vuelve a mostrar) y guárdala solo en variables de entorno; nunca en el repositorio ni en un chat.
+4. Local: `OPENAI_API_KEY=sk-... ./for-mac/run.sh`. Railway: variable `OPENAI_API_KEY` en el servicio.
+
+| Variable | Efecto |
+|---|---|
+| `OPENAI_API_KEY` | Activa el Asistente con IA. |
+| `OPENAI_MODEL` | Modelo a usar (por defecto `gpt-4o-mini`). |
+
+Se envían a OpenAI la pregunta, las últimas 6 intervenciones y los resultados de las herramientas (incluidas descripciones de los gastos consultados).
+
 ### Proteger el despliegue
 
 Configura estas variables en Railway (Variables). La contraseña la defines tú ahí; nunca la subas al repositorio.

@@ -10,3 +10,4 @@ data/working/
 tests/**/bin/
 tests/**/obj/
 archivosprueba/
+.env.local

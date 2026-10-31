@@ -48,7 +48,11 @@ export interface Diagnostics {
 export interface IntegrityReport { ok: boolean; checkedAt: string; elapsedMs: number; recordsInMemory: number; recordsOnDisk: number; idsUnique: boolean; memoryMatchesDisk: boolean; seedUnchanged: boolean; problems: string[] }
 export interface AuditEntry { at: string; action: string; expenseId: number | null; actor: string; revision: number; before: string | null; after: string | null; note: string | null }
 export interface Benchmark { records: number; results: { name: string; iterations: number; p50Ms: number; p95Ms: number; maxMs: number }[] }
-export interface AssistantAnswer { mode: string; intent: string; answer: string; columns: string[]; rows: string[][]; period: string; source: string; suggestions: string[]; scope: string[] }
+export interface ChatTurn { role: 'user' | 'assistant'; content: string }
+export interface AssistantStatus { llm: boolean; model: string | null }
+export interface VisualSeries { name: string; values: number[] }
+export interface AssistantVisual { kind: 'bar' | 'line' | 'pie' | 'table'; title: string; labels: string[]; series: VisualSeries[]; currency: string | null; columns: string[]; rows: string[][] }
+export interface AssistantAnswer { mode: string; intent: string; answer: string; columns: string[]; rows: string[][]; period: string; source: string; suggestions: string[]; scope: string[]; visuals?: AssistantVisual[] | null }
 
 export interface ApiProblem { status: number; title: string; errors?: Record<string, string[]>; currentVersion?: number; conflicts?: BulkConflict[]; conflictCount?: number }
 

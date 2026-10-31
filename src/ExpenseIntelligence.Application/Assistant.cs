@@ -3,7 +3,12 @@ using ExpenseIntelligence.Domain;
 
 namespace ExpenseIntelligence.Application;
 
-public sealed record AssistantAnswer(string Mode, string Intent, string Answer, string[] Columns, List<string[]> Rows, string Period, string Source, string[] Suggestions, string[] Scope);
+public sealed record VisualSeries(string Name, double[] Values);
+
+/// <summary>A chart or table the assistant decided to show. Every number is computed by the server from the live data, never written by the model.</summary>
+public sealed record AssistantVisual(string Kind, string Title, string[] Labels, VisualSeries[] Series, string? Currency, string[] Columns, List<string[]> Rows);
+
+public sealed record AssistantAnswer(string Mode, string Intent, string Answer, string[] Columns, List<string[]> Rows, string Period, string Source, string[] Suggestions, string[] Scope, AssistantVisual[]? Visuals = null);
 
 /// <summary>
 /// Conversational assistant WITHOUT an LLM. It understands intents plus entities (department, category, currency, payment method, period),
@@ -23,19 +28,26 @@ public sealed class AssistantService(IExpenseStore store, AnalyticsService analy
     private static bool Has(string q, params string[] words) => words.Any(q.Contains);
     private static string Pick(string seed, params string[] options) => options[Math.Abs(seed.GetHashCode(StringComparison.Ordinal) % options.Length)];
 
+    /// <summary>Greetings, thanks and help requests: answered without touching the data (and without calling an LLM).</summary>
+    public AssistantAnswer? SmallTalk(string question)
+    {
+        var q = TextNorm.Key(question);
+        var words = q.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length <= 3 && Has(q, "hola", "buenas", "buenos dias", "buen dia", "hey", "saludos", "que tal"))
+            return Say("greeting", "¡Hola! Soy Prestamito, el asistente de Insta Expenses. Puedo contarte en qué se gasta, quién gasta más, qué sigue pendiente o si hay algo raro en los datos. ¿Por dónde empezamos?", Examples.Take(4).ToArray());
+        if (Has(q, "gracias", "genial", "perfecto", "excelente", "buenisimo"))
+            return Say("thanks", "¡Con gusto! Si quieres, puedo profundizar en algo más.", ["¿Qué gastos siguen pendientes?", "¿Existen transacciones potencialmente duplicadas?"]);
+        if (Has(q, "ayuda", "que puedes", "que sabes", "que haces", "help", "como funcionas"))
+            return Say("help", "Puedo responder sobre totales, promedios, rankings de departamentos/categorías/métodos de pago, gastos pendientes o aprobados, los gastos más grandes y posibles duplicados. Puedes acotar por departamento, categoría, moneda, mes o año; por ejemplo: «gastos de Ventas en USD en marzo». Aquí no hay IA generativa: solo consulto tus datos, así que no invento cifras.", Examples.Take(5).ToArray());
+        return null;
+    }
+
     public AssistantAnswer Ask(string question, string? lastIntent = null, string? lastQuestion = null)
     {
         var q = TextNorm.Key(question);
         var snap = store.Current;
 
-        // --- small talk ---
-        var words = q.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length <= 3 && Has(q, "hola", "buenas", "buenos dias", "buen dia", "hey", "saludos", "que tal"))
-            return Say("greeting", "¡Hola! Soy el asistente de Insta Expenses. Puedo contarte en qué se gasta, quién gasta más, qué sigue pendiente o si hay algo raro en los datos. ¿Por dónde empezamos?", Examples.Take(4).ToArray());
-        if (Has(q, "gracias", "genial", "perfecto", "excelente", "buenisimo"))
-            return Say("thanks", "¡Con gusto! Si quieres, puedo profundizar en algo más.", ["¿Qué gastos siguen pendientes?", "¿Existen transacciones potencialmente duplicadas?"]);
-        if (Has(q, "ayuda", "que puedes", "que sabes", "que haces", "help", "como funcionas"))
-            return Say("help", "Puedo responder sobre totales, promedios, rankings de departamentos/categorías/métodos de pago, gastos pendientes o aprobados, los gastos más grandes y posibles duplicados. Puedes acotar por departamento, categoría, moneda, mes o año; por ejemplo: «gastos de Ventas en USD en marzo». Aquí no hay IA generativa: solo consulto tus datos, así que no invento cifras.", Examples.Take(5).ToArray());
+        if (SmallTalk(question) is { } talk) return talk;
         if (snap.Active.Count == 0)
             return Say("empty", "Todavía no hay datos cargados. Ve a «Importar archivo» y sube un JSON para empezar.", []);
 

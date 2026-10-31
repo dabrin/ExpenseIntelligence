@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  AssistantAnswer, AuditEntry, Benchmark, Diagnostics, DoctorReport, Expense, ExpenseInput, Facets, Filters, Insight, IntegrityReport, Paged, Summary, ApiProblem, ImportPreview, ImportResult, Timeline, HistoryItem, DatasetSummary, CompareResponse, ExpenseState, BulkRequest, BulkPreview, BulkResult,
+  AssistantAnswer, AssistantStatus, ChatTurn, AuditEntry, Benchmark, Diagnostics, DoctorReport, Expense, ExpenseInput, Facets, Filters, Insight, IntegrityReport, Paged, Summary, ApiProblem, ImportPreview, ImportResult, Timeline, HistoryItem, DatasetSummary, CompareResponse, ExpenseState, BulkRequest, BulkPreview, BulkResult,
 } from './models';
 
 export function toParams(f: Filters, extra: Record<string, string | number | boolean | undefined> = {}): HttpParams {
@@ -54,7 +54,8 @@ export class ApiService {
   benchmark() { return this.http.post<Benchmark>('/api/diagnostics/benchmark', {}); }
   history(take = 150, tipo = 'all') { return this.http.get<HistoryItem[]>('/api/history', { params: { take, tipo } }); }
   audit(take = 30) { return this.http.get<AuditEntry[]>('/api/audit', { params: { take } }); }
-  ask(question: string, lastIntent?: string, lastQuestion?: string) { return this.http.post<AssistantAnswer>('/api/assistant/query', { question, lastIntent, lastQuestion }); }
+  ask(question: string, lastIntent?: string, lastQuestion?: string, history?: ChatTurn[]) { return this.http.post<AssistantAnswer>('/api/assistant/query', { question, lastIntent, lastQuestion, history }); }
+  assistantStatus() { return this.http.get<AssistantStatus>('/api/assistant/status'); }
   importPreview(file: File) { const f = new FormData(); f.append('file', file, file.name); return this.http.post<ImportPreview>('/api/import/preview', f); }
   importCommit(token: string, mode: 'new' | 'merge' | 'switch' | 'reset', datasetId?: string) { return this.http.post<ImportResult>('/api/import/commit', { token, mode, datasetId }, this.actor); }
   datasets() { return this.http.get<DatasetSummary[]>('/api/datasets'); }

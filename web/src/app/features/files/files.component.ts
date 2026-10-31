@@ -147,7 +147,7 @@ const KINDS: { key: string; label: string }[] = [{ key: '', label: 'Todas' }, { 
     </div>
   }`,
   styles: [`
-    .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; h1 { margin: 0 0 4px; } p { margin: 0; max-width: 76ch; } }
+    .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; h1 { margin: 0 0 4px; } p { margin: 0; } }
     .list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 14px; margin-bottom: 18px; }
     .file { display: grid; gap: 14px; &.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, var(--shadow); } }
     .top { display: flex; align-items: flex-start; gap: 10px; app-icon { color: var(--accent-2); margin-top: 2px; } .name { display: grid; gap: 2px; flex: 1; min-width: 0; strong { overflow-wrap: anywhere; } span { font-size: 12px; } } }

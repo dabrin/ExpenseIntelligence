@@ -17,9 +17,6 @@ import { IconComponent } from '../../shared/icon.component';
           <div class="banner warn" role="alert" style="margin-bottom:12px"><app-icon name="alert" /><div><strong>Conflicto de edición.</strong> Alguien modificó este gasto mientras lo editabas (versión actual {{ conflict() }}).</div>
             <span class="spacer"></span><button type="button" class="btn sm" (click)="reloadLatest()">Cargar versión actual</button></div>
         }
-        @if (locked()) {
-          <div class="banner info" style="margin-bottom:12px"><app-icon name="info" /><span>Gasto aprobado: el monto y la moneda están bloqueados. Para cambiarlos, desmarca «Gasto aprobado», guarda y vuelve a editar.</span></div>
-        }
         @if (formError()) { <div class="banner bad" role="alert" style="margin-bottom:12px"><app-icon name="alert" /><span>{{ formError() }}</span></div> }
         @if (review(); as r) {
           <div class="review" role="alert">
@@ -58,7 +55,6 @@ import { IconComponent } from '../../shared/icon.component';
           <label class="field">Código de factura
             <input formControlName="codigoFactura" placeholder="FAC-12345" [class.invalid]="bad('codigoFactura')" />
             @if (bad('codigoFactura')) { <span class="err">{{ msg('codigoFactura') }}</span> }</label>
-          <label class="field span chk"><span><input type="checkbox" formControlName="aprobado" /> Gasto aprobado</span></label>
         </div>
         }
       </div>
@@ -89,8 +85,6 @@ export class ExpenseFormComponent implements OnInit {
   saving = signal(false);
   formError = signal<string | null>(null);
   conflict = signal<number | null>(null);
-  /** Mirrors the server rule: an expense that is approved in storage cannot change its amount or currency. */
-  locked = signal(false);
   review = signal<{ alerts: { level: 'danger' | 'warn' | 'info'; text: string }[]; others: string[] } | null>(null);
   private original: Expense | null = null;
   private version = 1;
@@ -100,7 +94,7 @@ export class ExpenseFormComponent implements OnInit {
     monto: [null as number | null, [Validators.required, Validators.min(0.01), Validators.max(1_000_000_000)]],
     moneda: ['', Validators.required], departamento: ['', [Validators.required, Validators.maxLength(80)]], categoria: ['', [Validators.required, Validators.maxLength(80)]],
     metodoPago: ['', [Validators.required, Validators.maxLength(80)]], fecha: [this.today, Validators.required],
-    codigoFactura: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9][A-Za-z0-9\-_/]{2,29}$/)]], aprobado: [false],
+    codigoFactura: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9][A-Za-z0-9\-_/]{2,29}$/)]],
   });
 
   ngOnInit() { const e = this.expense(); if (e) this.fill(e); }
@@ -108,8 +102,6 @@ export class ExpenseFormComponent implements OnInit {
     this.version = e.version;
     this.original = e;
     this.form.patchValue({ ...e });
-    this.locked.set(e.aprobado);
-    for (const c of ['monto', 'moneda'] as const) e.aprobado ? this.form.controls[c].disable() : this.form.controls[c].enable();
   }
 
   bad(c: string) { const x = this.form.get(c)!; return x.invalid && (x.touched || x.dirty); }
@@ -130,21 +122,17 @@ export class ExpenseFormComponent implements OnInit {
 
   reloadLatest() {
     const id = this.expense()!.id;
-    this.api.list({ from: '', to: '', departamentos: [], categorias: [], monedas: [], metodosPago: [], estado: '', q: String(id) }, 'id', false, 1, 5).subscribe(r => {
+    this.api.list({ from: '', to: '', departamentos: [], categorias: [], monedas: [], metodosPago: [], estado: '', ids: [id], q: '' }, 'id', false, 1, 5).subscribe(r => {
       const e = r.items.find(i => i.id === id); if (e) { this.fill(e); this.conflict.set(null); this.formError.set(null); }
     });
   }
 
-  /** Edits to approval, amount, currency, date or invoice are confirmed against a plain-language summary; text-only edits save directly. */
+  /** Edits to amount, currency, date or invoice are confirmed against a plain-language summary; text-only edits save directly. */
   private assess(body: ExpenseInput) {
     const o = this.original!;
     const alerts: { level: 'danger' | 'warn' | 'info'; text: string }[] = [];
     const others: string[] = [];
     const cur = o.moneda;
-    if (o.aprobado !== body.aprobado)
-      alerts.push(body.aprobado
-        ? { level: 'warn', text: 'Se aprobará este gasto. Una vez aprobado, su monto y moneda quedarán bloqueados.' }
-        : { level: 'warn', text: 'El gasto pasa de Aprobado a Pendiente: dejará de contar como aprobado y volverá a revisión.' });
     if (body.monto !== null && body.monto !== o.monto) {
       const pct = o.monto ? ((body.monto - o.monto) / o.monto) * 100 : 0;
       alerts.push({ level: Math.abs(pct) >= 50 ? 'danger' : 'warn', text: `Cambias el monto de ${fmt.money(o.monto, cur)} a ${fmt.money(body.monto, cur)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%).${Math.abs(pct) >= 50 ? ' Es un cambio grande: verifica que no sea un error de digitación.' : ''}` });
@@ -171,7 +159,8 @@ export class ExpenseFormComponent implements OnInit {
 
   private body(): ExpenseInput {
     const v = this.form.getRawValue();
-    return { ...v, monto: v.monto, descripcion: v.descripcion.trim() };
+    // approval is never set from this form: it is changed from the expense panel (approve / reject / back to pending)
+    return { ...v, monto: v.monto, descripcion: v.descripcion.trim(), aprobado: false };
   }
 
   send() {

@@ -166,52 +166,73 @@ public class StoreTests
     }
 }
 
-public class ApprovedExpenseLockTests : IDisposable
+public class ExpenseStateTests : IDisposable
 {
+    // id 1 is approved, id 2 is pending
     private readonly Sandbox _sb = new(Sandbox.Json([Sandbox.Rec(1, aprobado: true, monto: 100.5m), Sandbox.Rec(2, aprobado: false, monto: 80m)]));
     private readonly ExpenseIntelligence.Infrastructure.Storage.JsonExpenseStore _store;
     private readonly ExpenseService _svc;
 
-    public ApprovedExpenseLockTests() { _store = _sb.OpenStore(); _svc = new(_store, Sandbox.Clock); }
+    public ExpenseStateTests() { _store = _sb.OpenStore(); _svc = new(_store, Sandbox.Clock); }
     public void Dispose() { _store.Dispose(); _sb.Dispose(); }
 
-    private static ExpenseInput Same(decimal monto, string moneda = "USD", bool aprobado = true) => Sandbox.Input("Descripción corregida", monto, moneda) with { Aprobado = aprobado };
+    private static ExpenseInput Edit(decimal monto, bool aprobado = false) => Sandbox.Input("Descripción corregida", monto) with { Aprobado = aprobado };
 
     [Fact]
-    public async Task Approved_expense_rejects_a_new_amount_or_currency_and_stays_untouched()
+    public async Task Only_pending_expenses_can_be_edited()
     {
-        var ex = await Assert.ThrowsAsync<ValidationFailedException>(() => _svc.UpdateAsync(1, new(Same(999m), 1), "t"));
-        Assert.Equal([ExpenseService.LockedMessage], ex.Errors["monto"]);
-        await Assert.ThrowsAsync<ValidationFailedException>(() => _svc.UpdateAsync(1, new(Same(100.5m, "EUR"), 1), "t"));
-        Assert.Equal(100.5m, _store.Current.ById[1].Monto);
-        Assert.Equal(1, _store.Current.ById[1].Version);
+        var ex = await Assert.ThrowsAsync<ValidationFailedException>(() => _svc.UpdateAsync(1, new(Edit(999m), 1), "t"));
+        Assert.Equal([ExpenseService.NotEditableMessage], ex.Errors["estado"]);
+        Assert.Equal(100.5m, _store.Current.ById[1].Monto); Assert.Equal(1, _store.Current.ById[1].Version);
+
+        await _svc.ChangeStateAsync(2, new("rechazado", 1, "no corresponde"), "t");       // a rejected one is frozen too
+        await Assert.ThrowsAsync<ValidationFailedException>(() => _svc.UpdateAsync(2, new(Edit(5m), 2), "t"));
     }
 
     [Fact]
-    public async Task Changing_the_amount_and_unapproving_in_one_request_cannot_bypass_the_lock() =>
-        await Assert.ThrowsAsync<ValidationFailedException>(() => _svc.UpdateAsync(1, new(Same(999m, aprobado: false), 1), "t"));
-
-    [Fact]
-    public async Task Approved_expense_still_allows_other_fields_and_keeps_its_amount()
+    public async Task Editing_never_changes_the_approval_state_even_if_the_payload_asks_for_it()
     {
-        var u = await _svc.UpdateAsync(1, new(Same(100.5m), 1), "t");
-        Assert.Equal("Descripción corregida", u.Descripcion);
-        Assert.Equal(100.5m, u.Monto);
-        Assert.True(u.Aprobado);
+        var u = await _svc.UpdateAsync(2, new(Edit(123.45m, aprobado: true), 1), "t");
+        Assert.Equal(123.45m, u.Monto); Assert.False(u.Aprobado); Assert.Equal("pendiente", u.Estado);
+        var created = await _svc.CreateAsync(Sandbox.Input("Nuevo gasto") with { Aprobado = true }, "t");
+        Assert.Equal("pendiente", created.Estado);
     }
 
     [Fact]
-    public async Task Removing_approval_first_unlocks_the_amount()
+    public async Task Approve_reject_and_reopen_follow_the_rules_and_are_audited()
     {
-        var pending = await _svc.UpdateAsync(1, new(Same(100.5m, aprobado: false), 1), "t");
-        var changed = await _svc.UpdateAsync(1, new(Same(999m, aprobado: false), pending.Version), "t");
-        Assert.Equal(999m, changed.Monto);
+        var a = await _svc.ChangeStateAsync(2, new("aprobado", 1, null), "ana");
+        Assert.True(a.Aprobado); Assert.Equal(2, a.Version);
+        await Assert.ThrowsAsync<ValidationFailedException>(() => _svc.ChangeStateAsync(2, new("aprobado", 2, null), "ana"));            // already approved
+        await Assert.ThrowsAsync<ValidationFailedException>(() => _svc.ChangeStateAsync(2, new("rechazado", 2, "motivo valido"), "ana")); // approved -> rejected needs reopen first
+
+        var p = await _svc.ChangeStateAsync(2, new("pendiente", 2, null), "ana");
+        Assert.Equal("pendiente", p.Estado);
+        var edited = await _svc.UpdateAsync(2, new(Edit(999m), p.Version), "ana");                                                         // reopened: amount editable again
+        Assert.Equal(999m, edited.Monto);
+
+        var r = await _svc.ChangeStateAsync(2, new("rechazado", edited.Version, "  Sin soporte  "), "ana");
+        Assert.True(r.Rechazado); Assert.False(r.Aprobado); Assert.Equal("Sin soporte", r.MotivoRechazo);
+        var audit = _store.ReadAudit(10).Select(x => x.Action).Reverse().ToArray();
+        Assert.Equal(["approve", "reopen", "update", "reject"], audit);
+        Assert.Contains("Sin soporte", _store.ReadAudit(1)[0].Note);
+        Assert.Contains("rechazado", new HistoryService(_store).Get(1, "all")[0].Title);
+    }
+
+    [Theory] [InlineData(null)] [InlineData("ab")]
+    public async Task Rejecting_requires_a_reason_and_a_known_state_is_required(string? reason)
+    {
+        await Assert.ThrowsAsync<ValidationFailedException>(() => _svc.ChangeStateAsync(2, new("rechazado", 1, reason), "t"));
+        await Assert.ThrowsAsync<ValidationFailedException>(() => _svc.ChangeStateAsync(2, new("archivado", 1, null), "t"));
+        Assert.Equal("pendiente", _store.Current.ById[2].Estado);
     }
 
     [Fact]
-    public async Task Pending_expense_amount_is_freely_editable()
+    public async Task Stale_version_and_deleted_expenses_are_refused()
     {
-        var u = await _svc.UpdateAsync(2, new(Same(123.45m, aprobado: false), 1), "t");
-        Assert.Equal(123.45m, u.Monto);
+        await Assert.ThrowsAsync<ConcurrencyConflictException>(() => _svc.ChangeStateAsync(2, new("aprobado", 99, null), "t"));
+        await _svc.DeleteAsync(2, 1, "t");
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.ChangeStateAsync(2, new("aprobado", 2, null), "t"));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.ChangeStateAsync(777, new("aprobado", 1, null), "t"));
     }
 }

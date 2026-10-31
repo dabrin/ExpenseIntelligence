@@ -8,7 +8,7 @@ export class FilterStore {
   readonly activeCount = computed(() => {
     const f = this.filters();
     return (f.from || f.to ? 1 : 0) + (f.departamentos.length ? 1 : 0) + (f.categorias.length ? 1 : 0) + (f.monedas.length ? 1 : 0)
-      + (f.metodosPago.length ? 1 : 0) + (f.estado ? 1 : 0) + (f.q.trim() ? 1 : 0);
+      + (f.metodosPago.length ? 1 : 0) + (f.estado ? 1 : 0) + (f.q.trim() ? 1 : 0) + (f.ids.length ? 1 : 0);
   });
   patch(p: Partial<Filters>) { this.filters.update(f => ({ ...f, ...p })); }
   reset() { this.filters.set({ ...EMPTY_FILTERS }); }

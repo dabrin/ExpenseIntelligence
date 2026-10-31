@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         s.AddSingleton<ExpenseService>();
         s.AddSingleton<AnalyticsService>();
         s.AddSingleton<HistoryService>();
+        s.AddSingleton<Export.ExportService>();
         s.AddSingleton(config.GetSection(BulkOptions.Section).Get<BulkOptions>() ?? new BulkOptions());
         s.AddSingleton<BulkService>();
         s.AddSingleton<DatasetService>();

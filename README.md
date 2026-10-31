@@ -26,7 +26,7 @@ cd .. && dotnet run --project src/ExpenseIntelligence.Api
 
 - App: http://localhost:5080 · Swagger: http://localhost:5080/swagger
 - Desarrollo con recarga: `dotnet run --project src/ExpenseIntelligence.Api` + `cd web && npx ng serve` (proxy `/api` → 5080, http://localhost:4200)
-- Pruebas: `dotnet test` (105 pruebas)
+- Pruebas: `dotnet test` (111 pruebas)
 - Guía de uso paso a paso: [`docs/TUTORIAL.md`](docs/TUTORIAL.md)
 
 ## Qué incluye
@@ -34,10 +34,11 @@ cd .. && dotnet run --project src/ExpenseIntelligence.Api
 | Área | Detalle |
 |---|---|
 | **Dashboard** | KPIs por moneda (nunca se suman monedas), % aprobado/pendiente, evolución temporal (mensual/semanal), promedio y total por departamento, top categorías, métodos de pago. Filtros combinables: fechas, departamentos y categorías múltiples, moneda, método de pago, estado. |
-| **Gastos aprobados protegidos** | Un gasto aprobado no permite cambiar el monto ni la moneda (el resto de campos sí). Para modificarlos hay que quitar primero la aprobación y guardar; ambos pasos quedan en el audit. La regla se valida en el servidor dentro del mismo bloqueo de escritura (no se puede saltar aprobando y cambiando el monto en una sola petición) y el formulario bloquea los campos con una explicación. |
+| **Estados y edición** | Solo los gastos **pendientes** se pueden editar. Aprobar, rechazar (con motivo) y volver a pendiente se hace desde el panel de detalle (`POST /api/expenses/{id}/state`, con control de versión); cada cambio queda en el audit y el Historial. La regla se valida en el servidor dentro del lock de escritura, así que ni una petición directa a la API la salta. |
 | **Archivos (A/B)** | Cada archivo cargado queda registrado con su original intacto (solo lectura) y sus propios cambios (`/archivos`). Cambiar de archivo guarda el estado del actual y carga el otro: **las ediciones de cada archivo persisten**. Se puede volver un archivo a su original (descarta sus cambios), eliminar los inactivos o **dejar el sistema limpio** (vuelve al original del sistema y borra archivos cargados, cambios, papelera, historial y respaldos; exige escribir `LIMPIAR`). |
 | **Archivo repetido / versiones** | Al subir, se compara el contenido (SHA-256): si ya existe se ofrece volver a él (conserva sus cambios) o reiniciarlo; si hay otro con el mismo nombre pero contenido distinto se avisa que es una versión nueva. |
 | **Comparativas** | Tabla comparativa entre dos versiones cualesquiera (archivo A vs B, versión anterior con el mismo nombre, o un archivo contra su propio original para ver qué cambiaste): registros, % aprobados, totales por moneda (nunca mezcladas) y diferencias registro por registro, emparejando por ID o por código de factura. `GET /api/datasets/compare`. |
+| **Exportar** | Excel (`.xlsx`: hoja de datos + hoja de resumen por moneda), CSV y PDF con gráficos (impresión del dashboard), siempre según los filtros activos. `GET /api/expenses/export?format=xlsx\|csv&…filtros`. Neutraliza celdas que empiezan con `=`, `+`, `-` o `@` (inyección de fórmulas). |
 | **Aprobación / rechazo masivo** | En Gastos, casillas por fila y por página, "seleccionar los N resultados del filtro" (se resuelve en el servidor), barra flotante y confirmación con totales **por moneda**. Rechazar exige un motivo. Estado nuevo **Rechazado** (`rechazado` + `motivo_rechazo` opcionales en el JSON; `aprobado` no cambia y los `aprobado:false` históricos siguen siendo Pendiente). Todo el lote se valida y se guarda con **una sola escritura** del archivo: si algo cambió (versión, archivo activo, cantidad de resultados) no se modifica nada (409 con el detalle). Solo se procesan gastos pendientes; los demás se reportan como omitidos. Límite configurable `Bulk:MaxItems` (5000). Cada cambio queda en la auditoría con un id de operación común. `POST /api/expenses/bulk/{approve\|reject}[/preview]`. |
 | **Papelera e Historial** | Los gastos eliminados se ven y se restauran desde la pestaña Papelera de Gastos. `/historial` muestra en lenguaje claro cada edición (campo, antes → después), eliminación, restauración, alta y carga de archivos, con botón de restaurar mientras siga eliminado. |
 | **Alertas al editar** | Antes de guardar cambios en aprobación, monto, moneda, fecha o factura se muestra un resumen de lo que cambia (con % de variación del monto y aviso reforzado si supera el 50%). Eliminar un gasto aprobado también advierte. |
@@ -71,7 +72,7 @@ src/
   ExpenseIntelligence.Infrastructure  JsonExpenseStore (repositorio), RecoveryReader (ingesta tolerante), escritor streaming
   ExpenseIntelligence.Api             Minimal API, ProblemDetails, métricas de latencia, logging JSON, Swagger, hosting del SPA
 web/                                  Angular 17 standalone + signals, rutas lazy, Chart.js
-tests/ExpenseIntelligence.Tests       xUnit + WebApplicationFactory (105 pruebas)
+tests/ExpenseIntelligence.Tests       xUnit + WebApplicationFactory (111 pruebas)
 data/original/                        Original intacto (solo lectura, SHA-256 en SHA256.txt)
 data/working/                         (generado) expenses.json, .bak, ingest-report.json, quarantine.json, audit.jsonl
 ```
@@ -100,7 +101,7 @@ Dependencias en un solo sentido (Api → Infrastructure → Application → Doma
 
 ## Evidencia de verificación
 
-`dotnet test` → **105 pasadas, 0 fallidas**, incluyendo: validaciones, IDs duplicados, JSON corrupto/truncado/BOM, CRUD completo (servicio y HTTP), cada filtro y todos combinados, agregaciones verificadas a mano, paginación y orden, 100 creaciones concurrentes (IDs únicos y todas en el archivo), 40 actualizaciones concurrentes del mismo registro (exactamente 1 ganador), fallo de disco simulado (memoria intacta y recuperación posterior), `.tmp` huérfano, archivo dañado → `.bak`, segunda instancia rechazada, persistencia tras reinicio y lectura consistente durante escrituras. Las pruebas usan directorios temporales aislados: nunca tocan `data/`.
+`dotnet test` → **111 pasadas, 0 fallidas**, incluyendo: validaciones, IDs duplicados, JSON corrupto/truncado/BOM, CRUD completo (servicio y HTTP), cada filtro y todos combinados, agregaciones verificadas a mano, paginación y orden, 100 creaciones concurrentes (IDs únicos y todas en el archivo), 40 actualizaciones concurrentes del mismo registro (exactamente 1 ganador), fallo de disco simulado (memoria intacta y recuperación posterior), `.tmp` huérfano, archivo dañado → `.bak`, segunda instancia rechazada, persistencia tras reinicio y lectura consistente durante escrituras. Las pruebas usan directorios temporales aislados: nunca tocan `data/`.
 
 Mediciones reales sobre el dataset de 10 000 registros (máquina de desarrollo, Apple Silicon, .NET 8.0.133; salida de `PerformanceTests`):
 

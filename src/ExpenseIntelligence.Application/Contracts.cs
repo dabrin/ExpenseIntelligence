@@ -38,6 +38,9 @@ public sealed record ExpenseInput(
 
 public sealed record ExpenseUpdateInput(ExpenseInput Data, int Version);
 
+/// <summary>Estado: pendiente | aprobado | rechazado. Reason is required (3-500 chars) when rejecting.</summary>
+public sealed record StateChange(string? Estado, int Version, string? Reason);
+
 public sealed record AuditEntry(
     DateTimeOffset At, string Action, int? ExpenseId, string Actor, long Revision, string? Before, string? After, string? Note);
 

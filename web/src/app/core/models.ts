@@ -10,9 +10,9 @@ export interface ExpenseInput {
 }
 export interface Filters {
   from: string; to: string; departamentos: string[]; categorias: string[]; monedas: string[]; metodosPago: string[];
-  estado: '' | ExpenseState; q: string;
+  estado: '' | ExpenseState; q: string; ids: number[];
 }
-export const EMPTY_FILTERS: Filters = { from: '', to: '', departamentos: [], categorias: [], monedas: [], metodosPago: [], estado: '', q: '' };
+export const EMPTY_FILTERS: Filters = { from: '', to: '', departamentos: [], categorias: [], monedas: [], metodosPago: [], estado: '', q: '', ids: [] };
 
 export interface Facets { departamentos: string[]; categorias: string[]; monedas: string[]; metodosPago: string[]; minFecha: string | null; maxFecha: string | null; revision: number; deletedCount: number }
 export interface Paged<T> { items: T[]; total: number; page: number; pageSize: number; totalPages: number; revision: number }
@@ -56,7 +56,7 @@ export interface BulkConflict { id: number | null; kind: string; expectedVersion
 export interface BulkItem { id: number; version: number }
 export interface BulkFilterDto {
   from: string | null; to: string | null; departamentos: string[]; categorias: string[]; monedas: string[]; metodosPago: string[];
-  aprobado: boolean | null; search: string | null; estado: string | null;
+  aprobado: boolean | null; search: string | null; estado: string | null; ids: number[];
 }
 /** Either explicit items (with the version the user saw) or a filter + the count the user saw ("all results"). */
 export interface BulkRequest { datasetId: string; items?: BulkItem[]; filter?: BulkFilterDto; expectedCount?: number; reason?: string }

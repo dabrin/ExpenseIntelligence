@@ -7,7 +7,7 @@ namespace ExpenseIntelligence.Application;
 public sealed record ExpenseFilter(
     DateOnly? From = null, DateOnly? To = null,
     string[]? Departamentos = null, string[]? Categorias = null, string[]? Monedas = null, string[]? MetodosPago = null,
-    bool? Aprobado = null, string? Search = null, string? Estado = null)
+    bool? Aprobado = null, string? Search = null, string? Estado = null, int[]? Ids = null)
 {
     public static readonly ExpenseFilter None = new();
 
@@ -16,13 +16,14 @@ public sealed record ExpenseFilter(
     {
         var dep = ToSet(Departamentos); var cat = ToSet(Categorias); var mon = ToSet(Monedas); var pay = ToSet(MetodosPago);
         var q = string.IsNullOrWhiteSpace(Search) ? null : Search.Trim();
+        var ids = Ids is { Length: > 0 } ? new HashSet<int>(Ids) : null;
         var estado = ExpenseStates.IsValid(Estado?.Trim().ToLowerInvariant()) ? Estado!.Trim().ToLowerInvariant() : null;
         return source.Where(e =>
             (From is null || e.Fecha >= From) && (To is null || e.Fecha <= To) &&
             (dep is null || dep.Contains(e.Departamento)) && (cat is null || cat.Contains(e.Categoria)) &&
             (mon is null || mon.Contains(e.Moneda)) && (pay is null || pay.Contains(e.MetodoPago)) &&
             (Aprobado is null || e.Aprobado == Aprobado) &&
-            (estado is null || e.Estado == estado) &&
+            (estado is null || e.Estado == estado) && (ids is null || ids.Contains(e.Id)) &&
             (q is null || Matches(e, q)));
     }
 

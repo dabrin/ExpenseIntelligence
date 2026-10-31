@@ -57,13 +57,24 @@ La barra de filtros es común al Dashboard, Gastos y Máquina del tiempo. Se com
 
 "Restablecer" limpia todo.
 
+## 3b. Exportar (Excel, CSV y PDF)
+
+El botón **Exportar** está en **Gastos** y en el **Dashboard**. Siempre exporta **lo que selecciona el panel de filtros** en ese momento (fechas, departamento, categoría, moneda, pago, estado, búsqueda).
+
+- **Excel (.xlsx):** hoja **Gastos** (una fila por gasto, con autofiltro y fila fija) y hoja **Resumen** (filtros aplicados, totales por moneda con aprobado/pendiente/rechazado, y desgloses por departamento, categoría y método de pago). Las monedas nunca se suman entre sí.
+- **CSV:** datos planos en UTF-8 que Excel abre con tildes correctas.
+- **PDF con gráficos** (solo en el Dashboard): abre el diálogo de impresión del navegador con el dashboard preparado para papel (sin menú ni controles, con los filtros aplicados arriba). Elige **«Guardar como PDF»** como destino.
+
+Máximo por exportación: 200 000 gastos. El Excel no incluye gráficos nativos: los gráficos van en el PDF.
+
 ## 4. Crear, editar y eliminar gastos
 
 1. En **Gastos**, pulsa **Nuevo gasto**. Campos obligatorios; el monto debe ser positivo (solo dígitos y punto decimal) y la fecha válida. El código de factura se valida y avisa si ya está en uso.
-2. Para editar, usa el lápiz de la fila o haz clic en ella y elige **Editar**.
-   - Un gasto **aprobado no permite cambiar monto ni moneda**: quita primero la aprobación y guarda.
-   - Si el cambio es relevante (estado o monto) la app muestra una **alerta de revisión** antes de guardar.
-   - Si otra persona modificó el gasto mientras lo editabas, aparece un aviso de conflicto con opción de recargar.
+2. Haz clic en una fila para abrir el **panel de detalle** a la derecha. Desde ahí se gestiona el gasto según su estado:
+   - **Pendiente:** botones **Aprobar**, **Rechazar** (pide un motivo obligatorio) y **Editar**.
+   - **Aprobado o rechazado:** el gasto queda congelado. **Editar** aparece deshabilitado y puedes usar **Volver a pendiente** para reabrirlo.
+   - Solo los gastos **pendientes se pueden editar**; el formulario de edición ya no cambia el estado. Si el cambio es relevante (monto, moneda, fecha o factura) la app muestra una **alerta de revisión** antes de guardar, y si otra persona modificó el gasto mientras lo editabas aparece un aviso de conflicto con opción de recargar.
+   - Todo cambio de estado queda en el Historial (con el motivo, en los rechazos).
 3. Eliminar envía el gasto a la **Papelera** (eliminación lógica): sale de las métricas pero se conserva. Tienes un botón **Deshacer** en el aviso, y desde la pestaña **Papelera** puedes **Restaurar** cuando quieras.
 
 ## 5. Aprobación y rechazo masivo
@@ -76,7 +87,7 @@ La barra de filtros es común al Dashboard, Gastos y Máquina del tiempo. Se com
 
 Si algo cambió mientras seleccionabas (otro cambio, otra cantidad de resultados, otro archivo activo) la app no modifica nada y te pide recargar y volver a seleccionar. La selección se vacía sola al cambiar filtros, la vista o el archivo activo. Límite por operación: 5 000 (configurable en `Bulk:MaxItems`).
 
-Un gasto rechazado deja de contar como pendiente. Para volver a aprobarlo, edítalo y marca "Gasto aprobado".
+Un gasto rechazado deja de contar como pendiente. Para reabrirlo, usa **Volver a pendiente** en su panel de detalle.
 
 ## 6. Trabajar con varios archivos (A / B)
 
@@ -114,7 +125,7 @@ Un gasto rechazado deja de contar como pendiente. Para volver a aprobarlo, edít
 |---|---|
 | "Another process already owns the data directory" | Hay otra instancia usando `data/working`. Ciérrala. |
 | La página no carga tras actualizar el código | Recarga con Ctrl/Cmd+Shift+R; si falta el frontend, `cd web && npx ng build`. |
-| No puedo editar el monto de un gasto | Está aprobado: quita la aprobación y guarda. |
+| No puedo editar un gasto | Solo se editan los pendientes: ábrelo en el panel de detalle y usa «Volver a pendiente». |
 | El lote masivo respondió 409 | Los datos cambiaron: recarga y vuelve a seleccionar. |
 | Quiero empezar de cero | Archivos → Dejar el sistema limpio. |
 

@@ -10,8 +10,7 @@ import { IconComponent } from '../../shared/icon.component';
 @Component({
   selector: 'app-doctor', standalone: true, imports: [IconComponent, RouterLink], changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-  <header class="head rise"><div><h1>Data Doctor</h1><p class="muted">Centro de calidad de datos: detecta, explica y corrige de forma segura y auditada. El archivo original nunca se modifica.</p></div>
-    <button class="btn" type="button" (click)="dv.bump()"><app-icon name="refresh" /> Re-analizar</button></header>
+  <header class="head rise"><div><h1>Data Doctor</h1><p class="muted">Centro de calidad de datos: detecta, explica y corrige de forma segura y auditada. El archivo original nunca se modifica.</p></div></header>
 
   @if (error(); as e) { <div class="banner bad" role="alert"><app-icon name="alert" /><span>{{ e }}</span></div> }
   @if (loading() && !report()) { <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">@for (i of [1,2,3]; track i) { <div class="card"><div class="skeleton" style="height:90px"></div></div> }</div> }
@@ -87,7 +86,7 @@ import { IconComponent } from '../../shared/icon.component';
       </div></div>
   }`,
   styles: [`
-    .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; p { margin: 4px 0 0; max-width: 70ch; } }
+    .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; p { margin: 4px 0 0; } }
     .top { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
     .score { display: flex; gap: 18px; align-items: center; p { margin: 4px 0 0; font-size: 13px; } }
     .diff { margin: 0; padding: 10px 12px; background: var(--bg-2); border-radius: 8px; font: 12.5px/1.6 var(--mono); overflow: auto; .rm { color: var(--bad); } .add { color: var(--ok); } }

@@ -111,3 +111,18 @@ table.t { width: 100%; border-collapse: collapse; min-width: 880px;
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); background: var(--surface); border-left: 1px solid var(--border-2); z-index: 51; padding: 22px; overflow: auto; animation: slide .25s cubic-bezier(.2,.7,.2,1) both; box-shadow: -30px 0 60px -30px rgba(0,0,0,.6); }
 @keyframes slide { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
 dl.kv { display: grid; grid-template-columns: 130px 1fr; gap: 9px 12px; margin: 0; dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; } }
+
+/* ---- printing / "save as PDF": hide navigation and controls, keep KPIs and charts, avoid splitting cards */
+.print-only { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  body, .shell, .main, main { background: #fff !important; }
+  .shell { display: block !important; }
+  .side, .mobile-bar, .toasts, .skip, app-filter-bar, app-export-menu, .seg, .head .btn, .ins-grid a, .drawer, .backdrop { display: none !important; }
+  .print-only { display: block !important; margin: 0 0 10px; h2 { margin: 0; font-size: 16px; } p { margin: 2px 0 0; font-size: 11px; color: #555; } }
+  .card, article { break-inside: avoid; box-shadow: none !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; animation: none !important; }
+}
+
+/* page headers hold dropdowns (export menu): keep them above the content that follows */
+.head { position: relative; z-index: 20; }

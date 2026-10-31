@@ -70,6 +70,7 @@ public sealed class HistoryService(IExpenseStore store)
             "update" => $"Gasto #{id} editado",
             "delete" => $"Gasto #{id} eliminado",
             "restore" => $"Gasto #{id} restaurado",
+            "approve" => $"Gasto #{id} aprobado", "reject" => $"Gasto #{id} rechazado", "reopen" => $"Gasto #{id} vuelto a pendiente",
             _ => Label(a.Action),
         };
         string? detail = subject is null ? a.Note : subject.Descripcion;
@@ -80,7 +81,7 @@ public sealed class HistoryService(IExpenseStore store)
 
     internal static string GroupOf(string action) => action switch
     {
-        "create" => "creates", "update" => "edits", "delete" => "deletes", "restore" => "restores",
+        "create" => "creates", "update" or "approve" or "reject" or "reopen" => "edits", "delete" => "deletes", "restore" => "restores",
         _ when action.StartsWith("import", StringComparison.Ordinal) || action.StartsWith("dataset", StringComparison.Ordinal) || action == "factory-reset" => "files",
         _ => "bulk",
     };

@@ -9,7 +9,7 @@ import { IconComponent } from '../../shared/icon.component';
 
 const GROUPS: { key: string; label: string }[] = [
   { key: 'all', label: 'Todo' }, { key: 'edits', label: 'Ediciones' }, { key: 'deletes', label: 'Eliminaciones' },
-  { key: 'restores', label: 'Restauraciones' }, { key: 'files', label: 'Archivos' },
+  { key: 'restores', label: 'Restauraciones' }, { key: 'creates', label: 'Creaciones' }, { key: 'files', label: 'Archivos' },
 ];
 
 @Component({
@@ -17,7 +17,7 @@ const GROUPS: { key: string; label: string }[] = [
   template: `
     <header class="head rise">
       <div><h1>Historial de cambios</h1>
-        <p class="muted">Todo lo que se hizo en el sistema: ediciones, eliminaciones, restauraciones, altas y cargas de archivos. Los últimos 500 eventos.</p></div>
+        <p class="muted">Todo lo que se hizo en el sistema: ediciones, eliminaciones, restauraciones, creaciones de gastos, cambios de estado y cargas de archivos. Los últimos 500 eventos.</p></div>
     </header>
 
     <div class="seg" role="group" aria-label="Tipo de evento" style="margin-bottom:14px">
@@ -52,7 +52,7 @@ const GROUPS: { key: string; label: string }[] = [
       </ol>
     }`,
   styles: [`
-    .head { margin-bottom: 18px; h1 { margin: 0 0 4px; } p { margin: 0; max-width: 72ch; } }
+    .head { margin-bottom: 18px; h1 { margin: 0 0 4px; } p { margin: 0; } }
     .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
     .stale { opacity: .7; }
     .item { display: grid; gap: 8px; padding: 14px 16px; }
@@ -84,7 +84,7 @@ export class HistoryComponent {
     ).subscribe(r => { if (r) this.items.set(r); this.loading.set(false); });
   }
 
-  private readonly tags: Record<string, string> = { edits: 'Edición', deletes: 'Eliminación', restores: 'Restauración', creates: 'Alta', files: 'Archivo', bulk: 'Corrección' };
+  private readonly tags: Record<string, string> = { edits: 'Edición', deletes: 'Eliminación', restores: 'Restauración', creates: 'Creación', files: 'Archivo', bulk: 'Corrección' };
   tagLabel(g: string) { return this.tags[g] ?? 'Sistema'; }
   money(v: number, cur: string) { return fmt.money(v, cur); }
   shown(i: HistoryItem, field: string, v: string | null) { return field === 'monto' && v !== null && i.currency ? fmt.money(Number(v), i.currency) : v; }

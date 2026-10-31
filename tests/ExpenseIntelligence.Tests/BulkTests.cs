@@ -205,34 +205,33 @@ public class BulkTests
     }
 
     [Fact]
-    public async Task Approved_amount_lock_still_applies_and_approving_by_hand_clears_a_rejection()
+    public async Task Bulk_processed_expenses_are_frozen_for_editing_until_reopened()
     {
         using var sb = new Sandbox(); using var st = sb.OpenStore(); var svc = new ExpenseService(st, Sandbox.Clock);
         await Bulk(st).RunAsync("approve", Ids(st, [1]), "a");
-        var e = st.Current.ById[1];
-        var ex = await Assert.ThrowsAsync<ValidationFailedException>(() => svc.UpdateAsync(1, new(Sandbox.Input("Monto alterado", e.Monto + 1) with { Aprobado = true, Moneda = e.Moneda }, e.Version), "a"));
-        Assert.Contains("monto", ex.Errors.Keys);
-
         await Bulk(st).RunAsync("reject", Ids(st, [3], "monto mal"), "a");
-        var r = st.Current.ById[3];
-        var kept = await svc.UpdateAsync(3, new(Sandbox.Input("Sigue igual", r.Monto) with { Moneda = r.Moneda }, r.Version), "a");   // saved still unapproved
-        Assert.True(kept.Rechazado); Assert.Equal("monto mal", kept.MotivoRechazo);
-        var open = await svc.UpdateAsync(3, new(Sandbox.Input("Ahora aprobado", r.Monto) with { Moneda = r.Moneda, Aprobado = true }, kept.Version), "a");
-        Assert.True(open.Aprobado); Assert.False(open.Rechazado); Assert.Null(open.MotivoRechazo);
+        foreach (var id in new[] { 1, 3 })
+        {
+            var e = st.Current.ById[id];
+            var ex = await Assert.ThrowsAsync<ValidationFailedException>(() => svc.UpdateAsync(id, new(Sandbox.Input("Monto alterado", e.Monto + 1) with { Moneda = e.Moneda }, e.Version), "a"));
+            Assert.Contains("estado", ex.Errors.Keys);
+        }
+        var reopened = await svc.ChangeStateAsync(3, new("pendiente", st.Current.ById[3].Version, null), "a");
+        Assert.False(reopened.Rechazado); Assert.Null(reopened.MotivoRechazo);
     }
 
     [Fact]
     public async Task Bulk_and_individual_writes_running_together_never_lose_an_update()
     {
         using var sb = new Sandbox(); using var st = sb.OpenStore(); var svc = new ExpenseService(st, Sandbox.Clock); var b = Bulk(st);
-        var req = Ids(st, Odd(25));
-        // individual edits on APPROVED (even) records run concurrently with the bulk approval of the odd ones
-        var edits = Enumerable.Range(1, 12).Select(i => Task.Run(() => svc.UpdateAsync(i * 2, new(Sandbox.Input($"Edit {i}", st.Current.ById[i * 2].Monto) with { Moneda = st.Current.ById[i * 2].Moneda, Aprobado = true }, 1), "u")));
+        var req = Ids(st, Odd(13));                                                       // bulk-approves pending #1..#25
+        var others = Enumerable.Range(0, 12).Select(i => 27 + 2 * i).ToArray();           // meanwhile 12 other pending records are edited one by one
+        var edits = others.Select(id => Task.Run(() => svc.UpdateAsync(id, new(Sandbox.Input($"Edit {id}", 10m), 1), "u")));
         var bulk = Task.Run(() => b.RunAsync("approve", req, "a"));
         await Task.WhenAll(edits.Append((Task)bulk));
-        Assert.Equal(25, (await bulk).Applied);
-        Assert.All(Odd(25), i => Assert.True(st.Current.ById[i].Aprobado));
-        Assert.All(Enumerable.Range(1, 12), i => Assert.Equal($"Edit {i}", st.Current.ById[i * 2].Descripcion));
+        Assert.Equal(13, (await bulk).Applied);
+        Assert.All(Odd(13), i => Assert.True(st.Current.ById[i].Aprobado));
+        Assert.All(others, id => { Assert.Equal($"Edit {id}", st.Current.ById[id].Descripcion); Assert.False(st.Current.ById[id].Aprobado); });
         Assert.True((await st.VerifyIntegrityAsync()).Ok);                                // memory == disk after the race
     }
 
@@ -281,6 +280,16 @@ public class BulkTests
         Assert.True(res.ElapsedMs < 3000, $"bulk of 5000 took {res.ElapsedMs} ms");
         Assert.Equal(10_000, st.Current.Active.Count(e => e.Aprobado));
         Assert.Equal(5000, File.ReadLines(Path.Combine(sb.Work, "audit.jsonl")).Count(l => l.Contains("\"action\":\"bulk-approve\"")));  // one audit line per record
+    }
+
+    [Fact]
+    public void Id_filter_is_exact_unlike_text_search()
+    {
+        using var sb = new Sandbox(); using var st = sb.OpenStore();
+        var loose = new ExpenseFilter(Search: "1").Apply(st.Current.Active).Count();
+        var exact = new ExpenseFilter(Ids: [1, 12]).Apply(st.Current.Active).Select(e => e.Id).OrderBy(x => x).ToArray();
+        Assert.True(loose > 2);                       // "1" also matches #10, #11, invoice codes...
+        Assert.Equal([1, 12], exact);
     }
 
     [Fact]

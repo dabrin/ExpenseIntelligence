@@ -142,7 +142,7 @@ public sealed class InsightsService(IExpenseStore store)
             if (old.Count == 0) continue;
             list.Add(new Insight($"backlog-{cur}", "backlog", "warning", $"Pendientes con más de 60 días ({cur})",
                 $"{old.Count} gastos sin aprobar anteriores a {cutoff:yyyy-MM-dd} suman {N(old.Sum(r => r.Monto))} {cur}.",
-                new() { ["moneda"] = cur, ["count"] = old.Count, ["total"] = old.Sum(r => r.Monto), ["oldestIds"] = old.OrderBy(r => r.Fecha).Take(10).Select(r => r.Id).ToList() }));
+                new() { ["moneda"] = cur, ["hasta"] = cutoff.AddDays(-1).ToString("yyyy-MM-dd"), ["count"] = old.Count, ["total"] = old.Sum(r => r.Monto), ["oldestIds"] = old.OrderBy(r => r.Fecha).Take(10).Select(r => r.Id).ToList() }));
         }
     }
 }

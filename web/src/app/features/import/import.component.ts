@@ -85,7 +85,7 @@ import { IconComponent } from '../../shared/icon.component';
     }
   }`,
   styles: [`
-    .head { margin-bottom: 18px; p { margin: 4px 0 0; max-width: 78ch; } }
+    .head { margin-bottom: 18px; p { margin: 4px 0 0; } }
     .drop { display: grid; place-items: center; gap: 10px; text-align: center; padding: 56px 20px; border: 2px dashed var(--border-2); border-radius: 18px; background: var(--surface); cursor: pointer; transition: all .15s;
       &:hover, &.over { border-color: var(--accent); background: var(--accent-bg); } app-icon { color: var(--accent-2); } }
     .k { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); } .stat { display: grid; gap: 4px; b { font-size: 24px; letter-spacing: -.02em; } small { font-size: 12px; } }

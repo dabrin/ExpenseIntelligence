@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 
 const PATHS: Record<string, string> = {
   dashboard: 'M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z',
+  download: 'M12 3v12m0 0 5-5m-5 5-5-5M4 19h16',
   list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
   doctor: 'M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9zM12 9v6M9 12h6',
   play: 'M7 4l13 8-13 8z', pause: 'M8 4v16M16 4v16', clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 7v5l3 2', skip: 'M5 4l10 8-10 8zM19 4v16',

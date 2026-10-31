@@ -127,7 +127,7 @@ public sealed class BulkService(IExpenseStore store, BulkOptions options)
         return new Planned(requested, duplicates, eligible, skipped);
     }
 
-    private static string CleanReason(string? reason)
+    public static string CleanReason(string? reason)
     {
         var t = reason?.Trim() ?? "";
         if (t.Length < MinReason) throw Invalid("motivo", $"El motivo del rechazo es obligatorio (mínimo {MinReason} caracteres).");

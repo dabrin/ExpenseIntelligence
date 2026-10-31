@@ -39,7 +39,7 @@ interface Msg { id: number; who: 'me' | 'bot'; full: string; shown: string; answ
     </form>
   </section>`,
   styles: [`
-    .head { margin-bottom: 18px; p { margin: 4px 0 0; max-width: 80ch; } }
+    .head { margin-bottom: 18px; p { margin: 4px 0 0; } }
     .avatar { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--green), var(--green-2)); flex: none; &.sm { width: 28px; height: 28px; border-radius: 9px; margin-top: 2px; } }
     .chat { display: grid; grid-template-rows: 1fr auto; min-height: 62vh; padding: 0; overflow: hidden; }
     .log { padding: 20px; display: grid; gap: 16px; align-content: start; overflow: auto; max-height: 66vh; }

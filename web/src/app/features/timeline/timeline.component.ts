@@ -93,7 +93,7 @@ function label(period: string) {
     }`,
   styles: [`
     :host { display: block; }
-    .head { margin-bottom: 18px; h1 { margin: 0 0 4px; } p { margin: 0; max-width: 70ch; } }
+    .head { margin-bottom: 18px; h1 { margin: 0 0 4px; } p { margin: 0; } }
     .stage { margin-top: 16px; display: grid; gap: 16px; }
     .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
     .play { min-width: 138px; justify-content: center; }

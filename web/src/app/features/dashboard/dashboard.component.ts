@@ -7,13 +7,14 @@ import { ApiService, asProblem } from '../../core/api.service';
 import { Insight, Summary } from '../../core/models';
 import { DataVersion, FilterStore, ThemeService, fmt } from '../../core/state';
 import { ChartComponent } from '../../shared/chart.component';
+import { ExportMenuComponent } from '../../shared/export-menu.component';
 import { FilterBarComponent } from '../../shared/filter-bar.component';
 import { IconComponent } from '../../shared/icon.component';
 
 const CUR_VAR: Record<string, string> = { CRC: '--c-crc', USD: '--c-usd', EUR: '--c-eur' };
 
 @Component({
-  selector: 'app-dashboard', standalone: true, imports: [FilterBarComponent, ChartComponent, IconComponent, RouterLink], changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-dashboard', standalone: true, imports: [FilterBarComponent, ChartComponent, IconComponent, RouterLink, ExportMenuComponent], changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.component.html', styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent {
@@ -21,6 +22,21 @@ export class DashboardComponent {
   private store = inject(FilterStore);
   private dv = inject(DataVersion);
   private theme = inject(ThemeService);
+  activeCount = this.store.activeCount;
+  printedAt = new Date().toLocaleString('es');
+  /** Plain-language list of the active filters, printed at the top of the PDF so the report says what it covers. */
+  filterText = computed(() => {
+    const f = this.store.filters(); const p: string[] = [];
+    if (f.from || f.to) p.push(`fechas ${f.from || 'inicio'} a ${f.to || 'hoy'}`);
+    if (f.departamentos.length) p.push('departamento: ' + f.departamentos.join(', '));
+    if (f.categorias.length) p.push('categoría: ' + f.categorias.join(', '));
+    if (f.monedas.length) p.push('moneda: ' + f.monedas.join(', '));
+    if (f.metodosPago.length) p.push('pago: ' + f.metodosPago.join(', '));
+    if (f.estado) p.push('estado: ' + f.estado);
+    if (f.q.trim()) p.push('búsqueda: «' + f.q.trim() + '»');
+    if (f.ids.length) p.push('gastos: ' + f.ids.slice(0, 6).map(i => '#' + i).join(', '));
+    return p.join(' · ');
+  });
   fmt = fmt;
 
   summary = signal<Summary | null>(null);

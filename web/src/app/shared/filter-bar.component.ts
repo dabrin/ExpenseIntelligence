@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of, switchMap } from 'rxjs';
 import { ApiService } from '../core/api.service';
@@ -14,6 +14,7 @@ import { MultiSelectComponent } from './multi-select.component';
       <div class="row top">
         <strong class="ttl"><app-icon name="filter" /> Filtros</strong>
         @if (store.activeCount() > 0) { <span class="badge plain">{{ store.activeCount() }} activos</span> }
+        <span class="hint" title="Estos filtros se comparten entre Dashboard, Gastos y Máquina del tiempo: lo que elijas aquí se mantiene al cambiar de pantalla."><app-icon name="info" [size]="13" /> Compartidos en todo el sistema</span>
         <span class="spacer"></span>
         <div class="seg" role="group" aria-label="Estado de aprobación">
           <button type="button" [class.on]="f().estado === ''" (click)="store.patch({ estado: '' })">Todos</button>
@@ -37,17 +38,20 @@ import { MultiSelectComponent } from './multi-select.component';
         <button type="button" class="chip" (click)="preset(90)">Últimos 90 días</button>
         <button type="button" class="chip" (click)="preset(365)">Últimos 12 meses</button>
         <button type="button" class="chip" (click)="store.patch({ from: '', to: '' })">Todo el histórico</button>
-        @if (showSearch()) {
-          <span class="spacer"></span>
-          <label class="search"><app-icon name="search" /><input type="search" placeholder="Buscar descripción, factura o ID" [value]="f().q" (input)="store.patch({ q: val($event) })" aria-label="Buscar" /></label>
-        }
+        <span class="spacer"></span>
+        <label class="search"><app-icon name="search" /><input type="search" placeholder="Buscar descripción, factura o ID" [value]="f().q" (input)="store.patch({ q: val($event) })" aria-label="Buscar" /></label>
       </div>
+      @if (f().ids.length) {
+        <div class="banner info sm"><app-icon name="info" /><span>Mostrando solo {{ f().ids.length === 1 ? 'el gasto' : 'los gastos' }} <strong class="mono">{{ idsText() }}</strong>.</span>
+          <span class="spacer"></span><button type="button" class="btn sm ghost" (click)="store.patch({ ids: [] })">Quitar</button></div>
+      }
     </section>`,
   styles: [`
     .bar { display: grid; gap: 12px; padding: 14px 16px; }
     .ttl { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; }
     .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
-    .presets { font-size: 12.5px; }
+    .presets { font-size: 12.5px; } .hint { display: inline-flex; gap: 5px; align-items: center; font-size: 12px; color: var(--faint); cursor: help; }
+    .banner.sm { padding: 7px 12px; align-items: center; font-size: 13px; }
     .search { position: relative; display: block; width: min(320px, 100%); app-icon { position: absolute; left: 11px; top: 10px; color: var(--faint); } input { padding-left: 33px; } }
   `],
 })
@@ -55,7 +59,7 @@ export class FilterBarComponent {
   store = inject(FilterStore);
   private api = inject(ApiService);
   private dv = inject(DataVersion);
-  showSearch = input(false);
+  idsText = computed(() => this.f().ids.slice(0, 6).map(i => '#' + i).join(', ') + (this.f().ids.length > 6 ? '…' : ''));
   f = this.store.filters;
   facets = toSignal(toObservable(this.dv.n).pipe(switchMap(() => this.api.facets().pipe(catchError(() => of(null as Facets | null))))), { initialValue: null as Facets | null });
   val(e: Event) { return (e.target as HTMLInputElement).value; }

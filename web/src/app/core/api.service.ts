@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  AssistantAnswer, AuditEntry, Benchmark, Diagnostics, DoctorReport, Expense, ExpenseInput, Facets, Filters, Insight, IntegrityReport, Paged, Summary, ApiProblem, ImportPreview, ImportResult, Timeline, HistoryItem, DatasetSummary, CompareResponse, BulkRequest, BulkPreview, BulkResult,
+  AssistantAnswer, AuditEntry, Benchmark, Diagnostics, DoctorReport, Expense, ExpenseInput, Facets, Filters, Insight, IntegrityReport, Paged, Summary, ApiProblem, ImportPreview, ImportResult, Timeline, HistoryItem, DatasetSummary, CompareResponse, ExpenseState, BulkRequest, BulkPreview, BulkResult,
 } from './models';
 
 export function toParams(f: Filters, extra: Record<string, string | number | boolean | undefined> = {}): HttpParams {
@@ -12,6 +12,7 @@ export function toParams(f: Filters, extra: Record<string, string | number | boo
   for (const [k, v] of [['departamentos', f.departamentos], ['categorias', f.categorias], ['monedas', f.monedas], ['metodosPago', f.metodosPago]] as const)
     for (const item of v) p = p.append(k, item);
   if (f.estado) p = p.set('estado', f.estado);
+  for (const id of f.ids) p = p.append('ids', id);
   if (f.q.trim()) p = p.set('q', f.q.trim());
   for (const [k, v] of Object.entries(extra)) if (v !== undefined) p = p.set(k, String(v));
   return p;
@@ -38,6 +39,7 @@ export class ApiService {
   create(i: ExpenseInput) { return this.http.post<{ expense: Expense; warnings: string[] }>('/api/expenses', i, this.actor); }
   update(id: number, version: number, data: ExpenseInput) { return this.http.put<{ expense: Expense; warnings: string[] }>(`/api/expenses/${id}`, { version, data }, this.actor); }
   remove(id: number, version: number) { return this.http.delete<Expense>(`/api/expenses/${id}`, { params: { version }, ...this.actor }); }
+  setState(id: number, version: number, estado: ExpenseState, reason?: string) { return this.http.post<Expense>(`/api/expenses/${id}/state`, { estado, version, reason }, this.actor); }
   restore(id: number) { return this.http.post<Expense>(`/api/expenses/${id}/restore`, {}, this.actor); }
   bulkLimits() { return this.http.get<{ maxItems: number; datasetId: string }>('/api/expenses/bulk/limits'); }
   bulkPreview(op: 'approve' | 'reject', body: BulkRequest) { return this.http.post<BulkPreview>(`/api/expenses/bulk/${op}/preview`, body); }

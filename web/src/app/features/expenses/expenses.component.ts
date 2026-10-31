@@ -4,15 +4,16 @@ import { ActivatedRoute } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { catchError, debounceTime, of, switchMap, tap } from 'rxjs';
 import { ApiService, asProblem } from '../../core/api.service';
-import { BulkFilterDto, BulkRequest, BulkResult, Expense, Facets, Filters, Paged } from '../../core/models';
+import { BulkFilterDto, BulkRequest, BulkResult, Expense, ExpenseState, Facets, Filters, Paged } from '../../core/models';
 import { DataVersion, FilterStore, ToastService, fmt } from '../../core/state';
 import { FilterBarComponent } from '../../shared/filter-bar.component';
+import { ExportMenuComponent } from '../../shared/export-menu.component';
 import { IconComponent } from '../../shared/icon.component';
 import { BulkDialogComponent } from './bulk-dialog.component';
 import { ExpenseFormComponent } from './expense-form.component';
 
 @Component({
-  selector: 'app-expenses', standalone: true, imports: [FilterBarComponent, IconComponent, ExpenseFormComponent, BulkDialogComponent, DatePipe], changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-expenses', standalone: true, imports: [FilterBarComponent, IconComponent, ExpenseFormComponent, BulkDialogComponent, ExportMenuComponent, DatePipe], changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
   <header class="head rise">
     <div><h1>Gestión de gastos</h1>
@@ -22,13 +23,14 @@ import { ExpenseFormComponent } from './expense-form.component';
         <button type="button" [class.on]="!trash()" (click)="trash.set(false)">Activos</button>
         <button type="button" [class.on]="trash()" (click)="trash.set(true)">Papelera @if ((facets()?.deletedCount ?? 0) > 0) { <span class="count">{{ facets()!.deletedCount }}</span> }</button>
       </div>
+      @if (!trash()) { <app-export-menu /> }
       @if (!trash()) { <button type="button" class="btn primary" (click)="openForm(null)"><app-icon name="plus" /> Nuevo gasto</button> }
     </div>
   </header>
   @if (trash()) {
     <div class="banner info" style="margin-bottom:12px"><app-icon name="info" /><span>La papelera muestra los gastos eliminados. No cuentan en las métricas y puedes restaurarlos cuando quieras. Los cambios y eliminaciones quedan registrados en el Historial.</span></div>
   }
-  <app-filter-bar [showSearch]="true" />
+  <app-filter-bar />
 
   @if (error(); as e) { <div class="banner bad" role="alert" style="margin-top:16px"><app-icon name="alert" /><span>{{ e }}</span><span class="spacer"></span><button class="btn sm" type="button" (click)="dv.bump()">Reintentar</button></div> }
 
@@ -58,7 +60,7 @@ import { ExpenseFormComponent } from './expense-form.component';
       <tbody>
         @if (loading() && !data()) { @for (i of [1,2,3,4,5,6,7,8]; track i) { <tr><td colspan="11"><div class="skeleton" style="height:16px"></div></td></tr> } }
         @for (e of data()?.items ?? []; track e.id) {
-          <tr (click)="trash() ? null : detail.set(e)" tabindex="0" (keydown.enter)="trash() ? null : detail.set(e)" [class.sel]="isSel(e)">
+          <tr (click)="trash() ? null : openDetail(e)" tabindex="0" (keydown.enter)="trash() ? null : openDetail(e)" [class.sel]="isSel(e)">
             @if (!trash()) {
               <td class="chk" (click)="$event.stopPropagation()">
                 <input type="checkbox" [checked]="isSel(e)" [disabled]="e.estado !== 'pendiente' || allMode()" (change)="toggle(e)"
@@ -76,7 +78,6 @@ import { ExpenseFormComponent } from './expense-form.component';
               @if (trash()) {
                 <button type="button" class="btn sm" (click)="restoreOne(e)" [attr.aria-label]="'Restaurar gasto ' + e.id"><app-icon name="undo" /> Restaurar</button>
               } @else {
-                <button type="button" class="btn ghost icon" (click)="openForm(e)" [attr.aria-label]="'Editar gasto ' + e.id"><app-icon name="edit" /></button>
                 <button type="button" class="btn ghost icon danger" (click)="confirmDelete.set(e)" [attr.aria-label]="'Eliminar gasto ' + e.id"><app-icon name="trash" /></button>
               }
             </td>
@@ -117,7 +118,38 @@ import { ExpenseFormComponent } from './expense-form.component';
         <dt>Método de pago</dt><dd>{{ e.metodoPago }}</dd><dt>Fecha</dt><dd>{{ e.fecha }}</dd><dt>Factura</dt><dd class="mono">{{ e.codigoFactura }}</dd>
         <dt>Versión</dt><dd class="mono">{{ e.version }}</dd><dt>Actualizado</dt><dd>{{ e.actualizadoEn ? (e.actualizadoEn | date: 'medium') : 'Sin cambios desde la carga' }}</dd>
       </dl>
-      <div class="row" style="margin-top:24px"><button class="btn primary" type="button" (click)="openForm(e)"><app-icon name="edit" /> Editar</button><button class="btn danger" type="button" (click)="confirmDelete.set(e)"><app-icon name="trash" /> Eliminar</button></div>
+      @if (stateAction(); as a) {
+        <div class="act-panel" role="group" aria-label="Confirmar cambio de estado">
+          @switch (a) {
+            @case ('aprobado') { <div class="banner warn"><app-icon name="alert" /><span>Al aprobar, el gasto queda <strong>bloqueado</strong>: no se podrá editar hasta volverlo a pendiente. Cuenta como aprobado en las métricas.</span></div> }
+            @case ('rechazado') {
+              <label class="field">Motivo del rechazo (obligatorio)
+                <textarea rows="3" maxlength="500" [value]="stateReason()" (input)="stateReason.set(textVal($event))" placeholder="Ej.: factura ilegible, gasto duplicado…" style="height:auto;padding:8px 10px"></textarea>
+                <span class="muted small">Se guarda en el gasto y en el Historial. {{ stateReason().trim().length }}/500</span></label> }
+            @default { <div class="banner info"><app-icon name="info" /><span>El gasto vuelve a <strong>pendiente</strong>: dejará de contar como {{ e.estado }} y podrá editarse de nuevo.</span></div> }
+          }
+          @if (stateError()) { <div class="banner bad" role="alert"><app-icon name="alert" /><span>{{ stateError() }}</span></div> }
+          <div class="row" style="justify-content:flex-end">
+            <button class="btn" type="button" (click)="cancelState()" [disabled]="stateBusy()">Cancelar</button>
+            <button class="btn" [class.primary]="a !== 'rechazado'" [class.danger]="a === 'rechazado'" type="button" (click)="confirmState(e)" [disabled]="stateBusy() || (a === 'rechazado' && stateReason().trim().length < 3)">
+              {{ stateBusy() ? 'Guardando…' : a === 'aprobado' ? 'Confirmar aprobación' : a === 'rechazado' ? 'Confirmar rechazo' : 'Volver a pendiente' }}</button>
+          </div>
+        </div>
+      } @else {
+        <div class="row act" style="margin-top:24px">
+          @if (e.estado === 'pendiente') {
+            <button class="btn primary" type="button" (click)="startState('aprobado')"><app-icon name="check" /> Aprobar</button>
+            <button class="btn danger" type="button" (click)="startState('rechazado')"><app-icon name="x" /> Rechazar</button>
+          } @else {
+            <button class="btn" type="button" (click)="startState('pendiente')"><app-icon name="undo" /> Volver a pendiente</button>
+          }
+        </div>
+        <div class="row act" style="margin-top:10px">
+          <button class="btn" type="button" (click)="openForm(e)" [disabled]="e.estado !== 'pendiente'"><app-icon name="edit" /> Editar</button>
+          <button class="btn danger" type="button" (click)="confirmDelete.set(e)"><app-icon name="trash" /> Eliminar</button>
+        </div>
+        @if (e.estado !== 'pendiente') { <p class="muted small" style="margin:10px 0 0">Solo los gastos <strong>pendientes</strong> se pueden editar. Vuelve este gasto a pendiente para modificarlo.</p> }
+      }
     </aside>
   }
 
@@ -156,6 +188,7 @@ import { ExpenseFormComponent } from './expense-form.component';
     .fab-n { margin-right: 6px; }
     @media (max-width: 640px) { .fab { bottom: 12px; } .fab .btn { flex: 1 1 auto; justify-content: center; } .fab-n { flex: 1 0 100%; text-align: center; margin: 0; } }
     .pager { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .act { flex-wrap: wrap; } .act-panel { display: grid; gap: 12px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
     .d-amt { font-size: 30px; font-weight: 700; letter-spacing: -.02em; margin: 14px 0 8px; font-variant-numeric: tabular-nums; }
   `],
 })
@@ -181,6 +214,7 @@ export class ExpensesComponent {
   error = signal<string | null>(null);
   trash = signal(false);
   detail = signal<Expense | null>(null);
+  openDetail(e: Expense) { this.stateAction.set(null); this.stateError.set(null); this.detail.set(e); }
   formOpen = signal(false);
   editing = signal<Expense | null>(null);
   confirmDelete = signal<Expense | null>(null);
@@ -232,7 +266,7 @@ export class ExpensesComponent {
   }
   private filterDto(f: Filters): BulkFilterDto {
     return { from: f.from || null, to: f.to || null, departamentos: f.departamentos, categorias: f.categorias, monedas: f.monedas, metodosPago: f.metodosPago,
-      aprobado: null, search: f.q.trim() || null, estado: f.estado || null };
+      aprobado: null, search: f.q.trim() || null, estado: f.estado || null, ids: f.ids };
   }
   onBulkDone(r: BulkResult) {
     this.clearSel(); this.dv.bump();
@@ -240,11 +274,39 @@ export class ExpensesComponent {
   }
   bulkRefresh() { this.bulk.set(null); this.clearSel(); this.dv.bump(); }
 
+  // ---- single-expense state change from the detail panel
+  stateAction = signal<ExpenseState | null>(null);
+  stateReason = signal(''); stateBusy = signal(false); stateError = signal<string | null>(null);
+  textVal(ev: Event) { return (ev.target as HTMLTextAreaElement).value; }
+  startState(s: ExpenseState) { this.stateAction.set(s); this.stateReason.set(''); this.stateError.set(null); }
+  cancelState() { this.stateAction.set(null); this.stateError.set(null); }
+  confirmState(e: Expense) {
+    const target = this.stateAction(); if (!target) return;
+    this.stateBusy.set(true); this.stateError.set(null);
+    this.api.setState(e.id, e.version, target, target === 'rechazado' ? this.stateReason().trim() : undefined).subscribe({
+      next: upd => {
+        this.stateBusy.set(false); this.stateAction.set(null); this.detail.set(upd); this.dv.bump();
+        this.toast.show('ok', target === 'aprobado' ? `Gasto #${e.id} aprobado.` : target === 'rechazado' ? `Gasto #${e.id} rechazado.` : `Gasto #${e.id} volvió a pendiente.`);
+      },
+      error: err => {
+        this.stateBusy.set(false); const p = asProblem(err);
+        this.stateError.set(p.status === 409 ? 'El gasto cambió mientras lo revisabas. Cierra este panel y vuelve a abrirlo.' : (p.errors ? Object.values(p.errors).flat().join(' ') : p.title));
+      },
+    });
+  }
+
   facets = toSignal(toObservable(this.dv.n).pipe(switchMap(() => this.api.facets().pipe(catchError(() => of(null as Facets | null))))), { initialValue: null as Facets | null });
 
   constructor() {
-    const q = inject(ActivatedRoute).snapshot.queryParamMap.get('q');
-    if (q) { this.store.reset(); this.store.patch({ q }); }
+    // Links from other pages (insight cards) arrive with an exact set of filters: start from a clean slate so the result is what the link promised.
+    const qp = inject(ActivatedRoute).snapshot.queryParamMap;
+    const link: Partial<Filters> = {};
+    if (qp.get('q')) link.q = qp.get('q')!;
+    if (qp.getAll('ids').length) link.ids = qp.getAll('ids').map(Number).filter(Number.isInteger);
+    if (qp.get('estado') === 'pendiente' || qp.get('estado') === 'aprobado' || qp.get('estado') === 'rechazado') link.estado = qp.get('estado') as Filters['estado'];
+    if (qp.getAll('moneda').length) link.monedas = qp.getAll('moneda');
+    if (qp.get('hasta')) link.to = qp.get('hasta')!;
+    if (Object.keys(link).length) { this.store.reset(); this.store.patch(link); }
     // which file is live + the per-operation cap; re-read whenever data reloads (a file switch bumps the version)
     toObservable(this.dv.n).pipe(switchMap(() => this.api.bulkLimits().pipe(catchError(() => of(null)))), takeUntilDestroyed())
       .subscribe(l => { if (l) { this.datasetId.set(l.datasetId); this.maxItems.set(l.maxItems); } });

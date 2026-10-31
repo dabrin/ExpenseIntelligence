@@ -22,21 +22,45 @@ public sealed partial class ExpenseService(IExpenseStore store, TimeProvider clo
         var clean = Validate(input.Data);
         return await store.UpdateAsync(id, input.Version, cur =>
         {
-            // Checked against the stored record inside the writer lock, so approving and changing the amount in one request cannot bypass it.
-            if (cur.Aprobado && (clean.Monto!.Value != cur.Monto || !string.Equals(clean.Moneda, cur.Moneda, StringComparison.Ordinal)))
-                throw new ValidationFailedException(new Dictionary<string, string[]> { ["monto"] = [LockedMessage] });
+            // Checked against the stored record inside the writer lock. Only pending expenses are editable; the approval state itself is changed through ChangeStateAsync.
+            if (cur.Estado != ExpenseStates.Pending)
+                throw new ValidationFailedException(new Dictionary<string, string[]> { ["estado"] = [NotEditableMessage] });
             return cur with
             {
                 Descripcion = clean.Descripcion!, Monto = clean.Monto!.Value, Moneda = clean.Moneda!, Categoria = clean.Categoria!,
-                Departamento = clean.Departamento!, MetodoPago = clean.MetodoPago!, Fecha = clean.Fecha!.Value,
-                Aprobado = clean.Aprobado, CodigoFactura = clean.CodigoFactura!,
-                // approving a rejected expense by hand closes the rejection; saving it still unapproved keeps it rejected
-                Rechazado = !clean.Aprobado && cur.Rechazado, MotivoRechazo = !clean.Aprobado && cur.Rechazado ? cur.MotivoRechazo : null,
+                Departamento = clean.Departamento!, MetodoPago = clean.MetodoPago!, Fecha = clean.Fecha!.Value, CodigoFactura = clean.CodigoFactura!,
             };
         }, actor, ct);
     }
 
-    public const string LockedMessage = "Un gasto aprobado no permite cambiar el monto ni la moneda. Quita primero la aprobación y guarda.";
+    public const string NotEditableMessage = "Solo se pueden editar gastos pendientes. Vuelve el gasto a pendiente para modificarlo.";
+
+    /// <summary>Approve / reject / reopen one expense. Approved and rejected expenses are frozen until reopened; the version is checked inside the writer lock.</summary>
+    public async Task<Expense> ChangeStateAsync(int id, StateChange req, string actor, CancellationToken ct = default)
+    {
+        var target = req.Estado?.Trim().ToLowerInvariant();
+        if (!ExpenseStates.IsValid(target)) throw Invalid("estado", "Estado desconocido: usa aprobado, rechazado o pendiente.");
+        var reason = target == ExpenseStates.Rejected ? BulkService.CleanReason(req.Reason) : null;
+        var action = target switch { ExpenseStates.Approved => "approve", ExpenseStates.Rejected => "reject", _ => "reopen" };
+        await store.ApplyBatchAsync(s =>
+        {
+            if (!s.ById.TryGetValue(id, out var cur) || cur.Eliminado) throw new NotFoundException(id);
+            if (cur.Version != req.Version) throw new ConcurrencyConflictException(id, req.Version, cur.Version);
+            if (cur.Estado == target) throw Invalid("estado", $"El gasto ya está {target}.");
+            if (target != ExpenseStates.Pending && cur.Estado != ExpenseStates.Pending)
+                throw Invalid("estado", "Solo un gasto pendiente puede aprobarse o rechazarse. Vuélvelo a pendiente primero.");
+            var next = target switch
+            {
+                ExpenseStates.Approved => cur with { Aprobado = true, Rechazado = false, MotivoRechazo = null },
+                ExpenseStates.Rejected => cur with { Aprobado = false, Rechazado = true, MotivoRechazo = reason },
+                _ => cur with { Aprobado = false, Rechazado = false, MotivoRechazo = null },
+            };
+            return new BatchPlan<int>(new Dictionary<int, Expense> { [id] = next }, id, reason is null ? null : $"motivo={reason}");
+        }, action, actor, ct);
+        return store.Current.ById[id];
+    }
+
+    private static ValidationFailedException Invalid(string field, string msg) => new(new Dictionary<string, string[]> { [field] = [msg] });
 
     public Task<Expense> DeleteAsync(int id, int version, string actor, CancellationToken ct = default) => store.DeleteAsync(id, version, actor, ct);
     public Task<Expense> RestoreAsync(int id, string actor, CancellationToken ct = default) => store.RestoreAsync(id, actor, ct);
@@ -48,7 +72,7 @@ public sealed partial class ExpenseService(IExpenseStore store, TimeProvider clo
     private static Expense Build(int id, ExpenseInput i) => new()
     {
         Id = id, Descripcion = i.Descripcion!, Monto = i.Monto!.Value, Moneda = i.Moneda!, Categoria = i.Categoria!, Departamento = i.Departamento!,
-        MetodoPago = i.MetodoPago!, Fecha = i.Fecha!.Value, Aprobado = i.Aprobado, CodigoFactura = i.CodigoFactura!, Version = 1,
+        MetodoPago = i.MetodoPago!, Fecha = i.Fecha!.Value, Aprobado = false, CodigoFactura = i.CodigoFactura!, Version = 1,
     };
 
     /// <summary>Validates and returns a canonicalised copy (trimmed, catalogue-matching casing). Throws <see cref="ValidationFailedException"/>.</summary>

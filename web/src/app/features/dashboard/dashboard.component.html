@@ -7,6 +7,7 @@
     </p>
   </div>
   <div class="row">
+    <app-export-menu [pdf]="true" />
     <div class="seg" role="group" aria-label="Moneda de análisis para las gráficas">
       @for (c of currencies(); track c) { <button type="button" [class.on]="cur() === c" (click)="curChoice.set(c)">{{ c }}</button> }
     </div>
@@ -17,6 +18,10 @@
   </div>
 </header>
 
+<section class="print-only" aria-hidden="true">
+  <h2>Insta Expenses · Reporte del dashboard</h2>
+  <p>{{ printedAt }} · {{ activeCount() ? activeCount() + ' filtros activos' : 'sin filtros' }}@if (filterText()) { · {{ filterText() }} }</p>
+</section>
 <app-filter-bar />
 
 @if (error(); as e) {
@@ -43,9 +48,9 @@
         </article>
       }
       <article class="card kpi rise" style="--k: var(--ok)">
-        <div class="k-top"><span class="cur">%</span><span class="muted">Aprobados vs pendientes</span></div>
+        <div class="k-top"><span class="cur">%</span><span class="muted">Aprobados · pendientes · rechazados</span></div>
         <div class="k-val">{{ fmt.pct(s.approval.approvedPct) }} <small class="muted">aprobado</small></div>
-        <div class="k-sub muted">{{ fmt.num(s.approval.approved) }} aprobados · {{ fmt.num(s.approval.pending) }} pendientes ({{ fmt.pct(s.approval.pendingPct) }})</div>
+        <div class="k-sub muted">{{ fmt.num(s.approval.approved) }} aprobados · {{ fmt.num(s.approval.pending) }} pendientes ({{ fmt.pct(s.approval.pendingPct) }}){{ s.approval.rejected ? ' · ' + fmt.num(s.approval.rejected) + ' rechazados' : '' }}</div>
         <div class="bar"><i [style.width.%]="s.approval.approvedPct"></i></div>
       </article>
     </section>
@@ -56,7 +61,7 @@
         <app-chart [config]="lineChart()" [height]="290" label="Evolución temporal del gasto" />
       </article>
       <article class="card rise">
-        <div class="card-head"><div><h2>Aprobado vs pendiente</h2><p>Por número de gastos</p></div></div>
+        <div class="card-head"><div><h2>Estado de los gastos</h2><p>Aprobados, pendientes y rechazados, por número de gastos</p></div></div>
         <app-chart [config]="approvalChart()" [height]="290" label="Porcentaje de gastos aprobados y pendientes" />
       </article>
       <article class="card rise">
@@ -92,7 +97,8 @@
             <p class="muted">{{ i.detail }}</p>
             @if (ranking(i).length) { <ul class="rk">@for (r of ranking(i).slice(0, 4); track r.departamento) { <li><span>{{ r.departamento }}</span><b [class.up]="r.cambioPct > 0">{{ r.cambioPct > 0 ? '+' : '' }}{{ r.cambioPct }}%</b></li> }</ul> }
             @if (shares(i).length) { <ul class="rk">@for (r of shares(i); track r.clave) { <li><span>{{ r.clave }}</span><b>{{ r.porcentaje }}%</b></li> }</ul> }
-            @if (insightIds(i).length) { <div class="row ids">@for (id of insightIds(i); track id) { <a class="chip mono" routerLink="/gastos" [queryParams]="{ q: id }">#{{ id }}</a> }</div> }
+            @if (insightIds(i).length) { <div class="row ids">@for (id of insightIds(i); track id) { <a class="chip mono" routerLink="/gastos" [queryParams]="{ ids: id }" title="Ver solo este gasto">#{{ id }}</a> }</div> }
+            @if (i.type === 'backlog') { <a class="btn sm" style="margin-top:12px;align-self:flex-start" routerLink="/gastos" [queryParams]="{ estado: 'pendiente', moneda: i.data['moneda'], hasta: i.data['hasta'] }">Ver los {{ i.data['count'] }} en Gastos</a> }
           </article>
         }
       </div>

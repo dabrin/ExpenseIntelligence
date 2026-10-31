@@ -89,10 +89,17 @@ static string Actor(HttpContext c) => c.Request.Headers.TryGetValue("X-Actor", o
 
 // ---------- expenses ----------
 api.MapGet("/expenses", ([AsParameters] ExpenseQueryParams p, ExpenseQueryService q) => q.Query(p.ToPageQuery())).WithTags("Expenses");
+api.MapGet("/expenses/export", ([AsParameters] ExpenseQueryParams p, string? format, ExpenseIntelligence.Infrastructure.Export.ExportService x) =>
+{
+    var f = x.Export(p.ToFilter(), format);
+    return Results.File(f.Content, f.ContentType, f.FileName);
+}).WithTags("Expenses");
 api.MapGet("/expenses/bulk/limits", (BulkService b) => new { maxItems = b.MaxItems, datasetId = b.DatasetId }).WithTags("Expenses");
 api.MapPost("/expenses/bulk/{operation}/preview", (string operation, BulkRequest body, BulkService b) => b.Preview(operation, body)).WithTags("Expenses");
 api.MapPost("/expenses/bulk/{operation}", async (string operation, BulkRequest body, BulkService b, HttpContext ctx, CancellationToken ct) =>
     await b.RunAsync(operation, body, Actor(ctx), ct)).WithTags("Expenses");
+api.MapPost("/expenses/{id:int}/state", async (int id, StateChange body, ExpenseService svc, HttpContext ctx, CancellationToken ct) =>
+    await svc.ChangeStateAsync(id, body, Actor(ctx), ct)).WithTags("Expenses");
 api.MapGet("/expenses/{id:int}", (int id, ExpenseQueryService q) => q.Get(id)).WithTags("Expenses");
 api.MapPost("/expenses", async (ExpenseInput input, ExpenseService svc, HttpContext ctx, CancellationToken ct) =>
 {
@@ -217,9 +224,9 @@ public sealed record FactoryReset(string? Confirm);
 
 public sealed record ExpenseQueryParams(
     DateOnly? From, DateOnly? To, string[]? Departamentos, string[]? Categorias, string[]? Monedas, string[]? MetodosPago,
-    bool? Aprobado, string? Q, string? Sort, bool? Desc, int? Page, int? PageSize, bool? Eliminados = null, string? Estado = null)
+    bool? Aprobado, string? Q, string? Sort, bool? Desc, int? Page, int? PageSize, bool? Eliminados = null, string? Estado = null, int[]? Ids = null)
 {
-    public ExpenseFilter ToFilter() => new(From, To, Departamentos, Categorias, Monedas, MetodosPago, Aprobado, Q, Estado);
+    public ExpenseFilter ToFilter() => new(From, To, Departamentos, Categorias, Monedas, MetodosPago, Aprobado, Q, Estado, Ids);
     public ExpensePageQuery ToPageQuery() => new(ToFilter(), Sort ?? "fecha", Desc ?? true, Page ?? 1, PageSize ?? 25, Eliminados ?? false);
 }
 
